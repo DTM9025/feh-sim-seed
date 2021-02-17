@@ -6,7 +6,7 @@ use rand::distributions::Bernoulli;
 use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
 
-use weighted_choice::{WeightedIndex2, WeightedIndex5};
+use weighted_choice::WeightedIndex5;
 
 use goal::{CustomGoal, GoalKind};
 
@@ -27,7 +27,6 @@ pub struct Sim {
 #[derive(Debug, Copy, Clone, Default)]
 struct RandTables {
     pool_dists: [WeightedIndex5; 2],
-    item_dists: [WeightedIndex2; 5],
 }
 
 /// Scratch space for representing the goal in a way that is faster to work with.
