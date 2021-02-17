@@ -93,6 +93,7 @@ impl TryFrom<u8> for Pool {
 #[derive(Copy, Clone, Debug)]
 pub enum Page {
     Main,
+    About,
     Help,
     Changelog,
 }
@@ -292,7 +293,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             model.curr_page = page;
         }
         Msg::Permalink => {
-            let url = seed::Url::new(vec!["fehstatsim/"]).search(&format!(
+            let url = seed::Url::new(vec!["genshinstatsim/"]).search(&format!(
                 "v=2&banner={}&goal={}&run=1",
                 base64::encode(&bincode::serialize(&model.banner).unwrap()),
                 base64::encode(&bincode::serialize(&model.goal).unwrap())
@@ -311,6 +312,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 fn view(model: &Model) -> Vec<Node<Msg>> {
     match model.curr_page {
         Page::Main => main_page(model),
+        Page::About => subpages::about(),
         Page::Help => subpages::help(),
         Page::Changelog => subpages::changelog(),
     }
@@ -321,16 +323,22 @@ fn main_page(model: &Model) -> Vec<Node<Msg>> {
     vec![
         header![
             a![
-                "How to use",
+                "About",
                 attrs! [
-                    At::Href => "/fehstatsim/help";
+                    At::Href => "/genshinstatsim/about";
                 ],
             ],
-            " | v0.2.0 ",
+            a![
+                "How to use",
+                attrs! [
+                    At::Href => "/genshinstatsim/help";
+                ],
+            ],
+            " | v0.0.1 ",
             a![
                 "Changelog",
                 attrs![
-                    At::Href => "/fehstatsim/changelog";
+                    At::Href => "/genshinstatsim/changelog";
                 ],
             ],
         ],
@@ -417,6 +425,7 @@ fn routes(url: seed::Url) -> Option<Msg> {
     let mut messages = vec![];
 
     messages.push(match url.path.get(1).map(String::as_str) {
+        Some("about") => Msg::PageChange(Page::About),
         Some("help") => Msg::PageChange(Page::Help),
         Some("changelog") => Msg::PageChange(Page::Changelog),
         _ => Msg::PageChange(Page::Main),
