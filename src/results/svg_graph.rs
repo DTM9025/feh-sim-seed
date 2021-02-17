@@ -69,7 +69,7 @@ fn graph_line(data: &Counter, highlight: Option<f32>) -> (Node<Msg>, Node<Msg>) 
             "cy" => y(value);
             "r" => "0.75px";
         ]]);
-        let label_text = format!("{}%: {} orbs", (pct * 1000.0).round() / 10.0, value);
+        let label_text = format!("{}%: {} pulls", (pct * 1000.0).round() / 10.0, value);
         points_el.add_child(text![
             attrs![
                 "font-size" => "15%";
