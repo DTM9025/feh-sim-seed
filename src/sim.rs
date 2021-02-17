@@ -13,6 +13,7 @@ use goal::{CustomGoal, GoalKind};
 struct SessionResult {
     chosen_count: u32,
     reset: bool,
+    pity_decr: u32,
 }
 
 /// A structure holding the information for a sequence of summoning
@@ -132,9 +133,16 @@ impl Sim {
             let SessionResult {
                 chosen_count,
                 reset,
+                pity_decr,
             } = self.session_select(&samples);
             if reset {
                 pity_count = 0;
+            } else if pity_decr > 0 {
+                if pity_count + chosen_count < 20 * pity_decr {
+                    pity_count = 0;
+                } else {
+                    pity_count += chosen_count - 20 * pity_decr;
+                }
             } else {
                 pity_count += chosen_count;
             }
@@ -152,12 +160,17 @@ impl Sim {
         let mut result = SessionResult {
             chosen_count: 0,
             reset: false,
+            pity_decr: 0,
         };
         for i in 0..5 {
             let sample = samples[i];
             if self.may_match_goal(sample.1) {
                 result.chosen_count += 1;
-                result.reset |= self.pull_orb(sample);
+                let (do_reset, do_pity_decr) = self.pull_orb(sample);
+                result.reset |= do_reset;
+                if do_pity_decr {
+                    result.pity_decr += 1;
+                }
                 if self.goal_data.is_met() {
                     return result;
                 }
@@ -166,7 +179,11 @@ impl Sim {
         if result.chosen_count == 0 {
             // None with the color we want, so pick randomly
             let sample = samples[self.rng.gen::<usize>() % samples.len()];
-            result.reset |= self.pull_orb(sample);
+            let (do_reset, do_pity_decr) = self.pull_orb(sample);
+            result.reset |= do_reset;
+            if do_pity_decr {
+                result.pity_decr += 1;
+            }
             result.chosen_count = 1;
         }
         result
@@ -180,16 +197,17 @@ impl Sim {
 
     /// Evaluates the result of selecting the given sample. Returns `true` if the
     /// sample made the rate increase reset.
-    fn pull_orb(&mut self, sample: (Pool, Color)) -> bool {
+    fn pull_orb(&mut self, sample: (Pool, Color)) -> (bool, bool) {
         let color = sample.1;
-        let do_reset = sample.0 == Pool::Focus || sample.0 == Pool::Fivestar;
+        let do_reset = sample.0 == Pool::Focus;
+        let do_pity_decr = sample.0 == Pool::Fivestar;
         if sample.0 == Pool::Threestar
             || sample.0 == Pool::Fourstar
             || sample.0 == Pool::Fivestar
             || (sample.0 == Pool::FourstarFocus && !self.goal_data.is_fourstar_focus)
             || !self.goal_data.color_needed[color as usize]
         {
-            return do_reset;
+            return (do_reset, do_pity_decr);
         }
         let focus_count = self.banner.focus_sizes[color as usize];
         let which_unit = if sample.0 == Pool::FourstarFocus {
@@ -209,7 +227,7 @@ impl Sim {
                 }
             }
         }
-        return do_reset;
+        return (do_reset, do_pity_decr);
     }
 
     /// The total orb cost of choosing the given number of units from a session.
