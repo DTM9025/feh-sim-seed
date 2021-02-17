@@ -110,10 +110,12 @@ impl Sim {
                     five_focus_guarantee = true;
                 }
                 Pool::FourstarFocus => {
+                    five_pity_count += 1;
                     four_pity_count = 0;
                     four_focus_guarantee = false;
                 }
                 Pool::Fourstar => {
+                    five_pity_count += 1;
                     four_pity_count = 0;
                     four_focus_guarantee = true;
                 }
