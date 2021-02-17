@@ -8,45 +8,37 @@ use strum_macros::EnumIter;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{banner::Banner, Color, Msg};
+use crate::{banner::Banner, ItemType, Msg};
 
 /// Pre-set options for common goals.
 #[derive(Copy, Clone, Debug, EnumIter, PartialEq, Eq, Serialize, Deserialize)]
 pub enum GoalPreset {
-    AnyFocus,
-    AllFocus,
-    RedFocus,
-    AnyRed,
-    RedFourstarFocus,
-    BlueFocus,
-    AnyBlue,
-    BlueFourstarFocus,
-    GreenFocus,
-    AnyGreen,
-    GreenFourstarFocus,
-    ColorlessFocus,
-    AnyColorless,
-    ColorlessFourstarFocus,
+    AnyFive,
+    AnyFiveChar,
+    FiveCharFocus,
+    AnyFiveWeapon,
+    FiveWeaponFocus,
+    AnyFour,
+    AnyFourChar,
+    FourCharFocus,
+    AnyFourWeapon,
+    FourWeaponFocus,
 }
 
 impl fmt::Display for GoalPreset {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use crate::goal::GoalPreset::*;
         let s = match *self {
-            AnyFocus => "Any 5* focus unit",
-            AllFocus => "All focus units",
-            RedFocus => "Specific red 5* focus unit",
-            RedFourstarFocus => "The red 4* focus unit",
-            AnyRed => "Any red 5* focus unit",
-            BlueFocus => "Specific blue 5* focus unit",
-            BlueFourstarFocus => "The blue 4* focus unit",
-            AnyBlue => "Any blue 5* focus unit",
-            GreenFocus => "Specific green 5* focus unit",
-            GreenFourstarFocus => "The green 4* focus unit",
-            AnyGreen => "Any green 5* focus unit",
-            ColorlessFocus => "Specific colorless 5* focus unit",
-            AnyColorless => "Any colorless 5* focus unit",
-            ColorlessFourstarFocus => "The colorless 4* focus unit",
+            AnyFive => "Any 5* Focus Item (Includes Weapon or Character)",
+            AnyFiveChar => "Any 5* Focus Character",
+            FiveCharFocus => "Specific 5* Focus Character",
+            AnyFiveWeapon => "Any 5* Focus Weapon",
+            FiveWeaponFocus => "Specific 5* Focus Weapon",
+            AnyFour => "Any 4* Focus Item (Includes Weapon or Character)",
+            AnyFourChar => "Any 4* Focus Character",
+            FourCharFocus => "Specific 4* Focus Character",
+            AnyFourWeapon => "Any 4* Focus Weapon",
+            FourWeaponFocus => "Specific 4* Focus Weapon",
         };
         f.write_str(s)
     }
@@ -71,23 +63,16 @@ impl GoalPreset {
     pub fn is_available(self, banner: &Banner) -> bool {
         use GoalPreset::*;
         match self {
-            AnyFocus | AllFocus => banner.focus_sizes.iter().any(|&x| x > 0),
-            RedFocus | AnyRed => banner.focus_sizes[0] > 0,
-            BlueFocus | AnyBlue => banner.focus_sizes[1] > 0,
-            GreenFocus | AnyGreen => banner.focus_sizes[2] > 0,
-            ColorlessFocus | AnyColorless => banner.focus_sizes[3] > 0,
-            RedFourstarFocus => {
-                banner.fourstar_focus == Some(Color::Red) && banner.focus_sizes[0] > 0
+            AnyFive => {
+                banner.focus_sizes[0] > 0 || banner.focus_sizes[1] > 0
             }
-            BlueFourstarFocus => {
-                banner.fourstar_focus == Some(Color::Blue) && banner.focus_sizes[1] > 0
+            AnyFiveChar | FiveCharFocus => banner.focus_sizes[0] > 0,
+            AnyFiveWeapon | FiveWeaponFocus => banner.focus_sizes[1] > 0,
+            AnyFour => {
+                banner.focus_sizes[2] > 0 || banner.focus_sizes[3] > 0
             }
-            GreenFourstarFocus => {
-                banner.fourstar_focus == Some(Color::Green) && banner.focus_sizes[2] > 0
-            }
-            ColorlessFourstarFocus => {
-                banner.fourstar_focus == Some(Color::Colorless) && banner.focus_sizes[3] > 0
-            }
+            AnyFourChar | FourCharFocus => banner.focus_sizes[2] > 0,
+            AnyFourWeapon | FourWeaponFocus => banner.focus_sizes[3] > 0,
         }
     }
 
@@ -96,14 +81,10 @@ impl GoalPreset {
     fn is_single_target(&self) -> bool {
         use GoalPreset::*;
         match self {
-            RedFocus
-            | BlueFocus
-            | GreenFocus
-            | ColorlessFocus
-            | RedFourstarFocus
-            | BlueFourstarFocus
-            | GreenFourstarFocus
-            | ColorlessFourstarFocus => true,
+            FiveCharFocus
+            | FiveWeaponFocus
+            | FourCharFocus
+            | FourWeaponFocus => true,
             _ => false,
         }
     }
@@ -119,7 +100,7 @@ pub enum GoalKind {
 /// A single unit that the goal is trying to obtain.
 #[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub struct GoalPart {
-    pub unit_color: Color,
+    pub item_type: ItemType,
     pub num_copies: u8,
     pub four_star: bool,
 }
@@ -140,7 +121,7 @@ pub enum Goal {
 
 impl Default for Goal {
     fn default() -> Self {
-        Goal::Preset(GoalPreset::AnyFocus, 1)
+        Goal::Preset(GoalPreset::AnyFive, 1)
     }
 }
 
@@ -150,7 +131,6 @@ impl Goal {
     pub fn as_custom(&self, banner: &Banner) -> CustomGoal {
         use crate::goal::GoalKind::*;
         use crate::goal::GoalPreset::*;
-        use crate::Color::*;
 
         let (preset, count) = match self {
             Goal::Preset(preset, count) => (*preset, *count),
@@ -163,19 +143,16 @@ impl Goal {
             1
         };
 
-        let kind = match preset {
-            AllFocus => All,
-            // Every other preset is either Any* or has only one target
-            _ => Any,
-        };
+        let kind = Any;
+
         let mut custom_goal = CustomGoal {
             kind,
             goals: vec![],
         };
 
-        let mut add_color_goal = |color: Color, four_star: bool| {
+        let mut add_item_goal = |item_type: ItemType, four_star: bool| {
             custom_goal.goals.push(GoalPart {
-                unit_color: color,
+                item_type: item_type,
                 num_copies: count,
                 four_star,
             });
@@ -183,41 +160,44 @@ impl Goal {
         // Add an individual GoalPart for each focus unit that matches the
         // conditions of the overall goal.
         match preset {
-            AllFocus | AnyFocus => {
-                for idx in 0..banner.focus_sizes.len() {
+            AnyFive => {
+                for idx in 0..2 {
                     for _ in 0..banner.focus_sizes[idx] {
-                        add_color_goal(Color::try_from(idx as u8).unwrap(), false);
+                        add_item_goal(ItemType::try_from(idx as u8).unwrap(), false);
                     }
                 }
             }
-            RedFocus => add_color_goal(Red, false),
-            BlueFocus => add_color_goal(Blue, false),
-            GreenFocus => add_color_goal(Green, false),
-            ColorlessFocus => add_color_goal(Colorless, false),
-            AnyRed => {
+            AnyFiveChar => {
                 for _ in 0..banner.focus_sizes[0] {
-                    add_color_goal(Red, false)
+                    add_item_goal(ItemType::FiveChar, false);
                 }
             }
-            AnyBlue => {
+            FiveCharFocus => add_item_goal(ItemType::FiveChar, false),
+            AnyFiveWeapon => {
                 for _ in 0..banner.focus_sizes[1] {
-                    add_color_goal(Blue, false)
+                    add_item_goal(ItemType::FiveWeapon, false);
                 }
             }
-            AnyGreen => {
+            FiveWeaponFocus => add_item_goal(ItemType::FiveWeapon, false),
+            AnyFour => {
+                for idx in 2..4 {
+                    for _ in 0..banner.focus_sizes[idx] {
+                        add_item_goal(ItemType::try_from(idx as u8).unwrap(), true);
+                    }
+                }
+            }
+            AnyFourChar => {
                 for _ in 0..banner.focus_sizes[2] {
-                    add_color_goal(Green, false)
+                    add_item_goal(ItemType::FourChar, true);
                 }
             }
-            AnyColorless => {
+            FourCharFocus => add_item_goal(ItemType::FourChar, true),
+            AnyFourWeapon => {
                 for _ in 0..banner.focus_sizes[3] {
-                    add_color_goal(Colorless, false)
+                    add_item_goal(ItemType::FourWeapon, true);
                 }
             }
-            RedFourstarFocus => add_color_goal(Red, true),
-            BlueFourstarFocus => add_color_goal(Blue, true),
-            GreenFourstarFocus => add_color_goal(Green, true),
-            ColorlessFourstarFocus => add_color_goal(Colorless, true),
+            FourWeaponFocus => add_item_goal(ItemType::FourWeapon, true),
         }
 
         custom_goal
@@ -229,7 +209,7 @@ impl Goal {
             Goal::Custom(custom_goal) => custom_goal
                 .goals
                 .iter()
-                .any(|&GoalPart { unit_color, .. }| banner.focus_sizes[unit_color as usize] > 0),
+                .any(|&GoalPart { item_type, .. }| banner.focus_sizes[item_type as usize] > 0),
             Goal::Preset(preset, _) => preset.is_available(banner),
         }
     }
@@ -371,23 +351,23 @@ fn advanced_goal_selector(goal: &Goal) -> Node<Msg> {
         }
 
         for (index, goal_part) in custom_goal.goals.iter().enumerate() {
-            let mut color_select = select![input_ev(Ev::Input, move |value| {
-                if let Some(color) = value
+            let mut item_select = select![input_ev(Ev::Input, move |value| {
+                if let Some(item_type) = value
                     .parse::<u8>()
                     .ok()
-                    .and_then(|num| Color::try_from(num).ok())
+                    .and_then(|num| ItemType::try_from(num).ok())
                 {
-                    Msg::GoalPartColorChange { index, color }
+                    Msg::GoalPartItemTypeChange { index, item_type }
                 } else {
                     Msg::Null
                 }
             }),];
-            for color in Color::iter() {
-                let mut attrs = attrs![At::Value => color as usize];
-                if goal_part.unit_color == color {
+            for item_type in ItemType::iter() {
+                let mut attrs = attrs![At::Value => item_type as usize];
+                if goal_part.item_type == item_type {
                     attrs.add(At::Selected, "");
                 }
-                color_select.add_child(option![attrs, color.to_string()]);
+                item_select.add_child(option![attrs, item_type.to_string()]);
             }
             base.add_child(div![
                 button![
@@ -414,8 +394,8 @@ fn advanced_goal_selector(goal: &Goal) -> Node<Msg> {
                     ]
                 ],
                 " copies of a specific ",
-                color_select,
-                " unit",
+                item_select,
+                " focus item",
             ]);
         }
 
@@ -423,7 +403,7 @@ fn advanced_goal_selector(goal: &Goal) -> Node<Msg> {
             simple_ev(
                 Ev::Click,
                 Msg::GoalPartAdd {
-                    color: Color::Red,
+                    item_type: ItemType::FiveChar,
                     quantity: 1
                 }
             ),
