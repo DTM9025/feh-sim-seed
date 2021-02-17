@@ -140,6 +140,9 @@ pub fn banner_selector(banner: &Banner) -> Node<Msg> {
                     At::Required => true;
                 ]
             ],
+        ],
+        div![
+            id!["focus_counts"],
             label![
                 attrs![
                     At::For => "focus_count_4c";

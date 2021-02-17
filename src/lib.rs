@@ -328,6 +328,7 @@ fn main_page(model: &Model) -> Vec<Node<Msg>> {
                     At::Href => "/genshinstatsim/about";
                 ],
             ],
+            " | ",
             a![
                 "How to use",
                 attrs! [
