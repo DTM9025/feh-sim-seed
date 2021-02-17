@@ -10,10 +10,17 @@ fn header() -> Node<Msg> {
         a![
             "Back",
             attrs! [
-                At::Href => "/fehstatsim/";
+                At::Href => "/genshinstatsim/";
             ]
         ],
     ]
+}
+
+/// Page contents for the about page.
+pub fn about() -> Vec<Node<Msg>> {
+    let mut els = vec![header()];
+    els.extend(El::from_markdown(include_str!("subpages/about.md")));
+    els
 }
 
 /// Page contents for the help page.
