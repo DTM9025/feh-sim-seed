@@ -35,29 +35,29 @@ mod query_string;
 
 #[repr(u8)]
 #[derive(Copy, Clone, PartialEq, Eq, Debug, EnumIter, Serialize, Deserialize)]
-pub enum Color {
-    Red,
-    Blue,
-    Green,
-    Colorless,
+pub enum ItemType {
+    FiveChar,
+    FiveWeapon,
+    FourChar,
+    FourWeapon,
 }
 
-impl fmt::Display for Color {
+impl fmt::Display for ItemType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", self)
     }
 }
 
-impl TryFrom<u8> for Color {
+impl TryFrom<u8> for ItemType {
     type Error = ();
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
-        use Color::*;
+        use ItemType::*;
         Ok(match value {
-            0 => Red,
-            1 => Blue,
-            2 => Green,
-            3 => Colorless,
+            0 => FiveChar,
+            1 => FiveWeapon,
+            2 => FourChar,
+            3 => FourWeapon,
             _ => return Err(()),
         })
     }
@@ -66,7 +66,7 @@ impl TryFrom<u8> for Color {
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Pool {
-    Focus,
+    FivestarFocus,
     Fivestar,
     FourstarFocus,
     Fourstar,
@@ -79,7 +79,7 @@ impl TryFrom<u8> for Pool {
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         use Pool::*;
         Ok(match value {
-            0 => Focus,
+            0 => FivestarFocus,
             1 => Fivestar,
             2 => FourstarFocus,
             3 => Fourstar,
@@ -133,13 +133,9 @@ pub enum Msg {
     /// Gather data.
     Run,
     /// Change the number of focus units for a given color.
-    BannerFocusSizeChange { color: Color, quantity: i8 },
-    /// Change the 4* focus setting
-    BannerFourstarFocusChange { focus: Option<Color> },
+    BannerFocusSizeChange { item_type: ItemType, quantity: i8 },
     /// Change the starting rates.
-    BannerRateChange { rates: (u8, u8) },
-    /// Change whether the banner uses the old or new 5* pools.
-    BannerFocusTypeToggle,
+    BannerRateChange { five_rate: u8, four_rate: u8, split_rates: (u8, u8), soft_pity: u8, hard_pity: u8 },
     /// Replace the banner with a new one.
     BannerSet { banner: Banner },
     /// Set the goal to a certain preset.
@@ -148,12 +144,12 @@ pub enum Msg {
     GoalPresetQuantityChange { quantity: u8 },
     /// Change the current preset into a custom goal.
     GoalMakeCustom,
-    /// Change the color for an individual unit target.
-    GoalPartColorChange { index: usize, color: Color },
+    /// Change the item type for an individual unit target.
+    GoalPartItemTypeChange { index: usize, item_type: ItemType },
     /// Change the number of copies for an individual unit target.
     GoalPartQuantityChange { index: usize, quantity: u8 },
     /// Add a new individual unit target.
-    GoalPartAdd { color: Color, quantity: u8 },
+    GoalPartAdd { item_type: ItemType, quantity: u8 },
     /// Change whether the individual targets all need to happen or just one.
     GoalKindChange { kind: GoalKind },
     /// Replace the goal with a new one.
@@ -179,29 +175,29 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             }
         }
         Msg::Alert { message } => alert(&message),
-        Msg::BannerFocusSizeChange { color, quantity } => {
-            model.banner.focus_sizes[color as usize] = quantity;
+        Msg::BannerFocusSizeChange { item_type, quantity } => {
+            model.banner.focus_sizes[item_type as usize] = quantity;
             model.data.clear();
         }
-        Msg::BannerRateChange { rates } => {
-            model.banner.starting_rates = rates;
+        Msg::BannerRateChange { five_rate, four_rate, split_rates, soft_pity, hard_pity } => {
+            model.banner.five_rate = five_rate;
+            model.banner.four_rate = four_rate;
+            model.banner.split_rates = split_rates;
+            model.banner.soft_pity = soft_pity;
+            model.banner.hard_pity = hard_pity;
             model.data.clear();
-            if rates == (8, 0) {
-                // Convenient handling for legendary banners, since they
-                // always have the same focus pool sizes.
-                model.banner.focus_sizes = [3, 3, 3, 3];
-            } else if rates == (6, 0) {
-                // Another special kind of banner
-                model.banner.focus_sizes = [2, 2, 2, 2];
+            if split_rates == (50, 50) {
+                // Character Event Wish
+                model.banner.focus_sizes = [1, 0, 3, 0];
+            } else if split_rates == (75, 25) {
+                // Weapon Event Wish
+                model.banner.focus_sizes = [0, 2, 0, 5];
+            } else if split_rates == (100, 0) {
+                // Standard Wish
+                // Note that because there is no focus, we
+                // simulate this by having all items in focus.
+                model.banner.focus_sizes = [5, 10, 16, 18];
             }
-        }
-        Msg::BannerFourstarFocusChange { focus } => {
-            model.banner.fourstar_focus = focus;
-            model.data.clear();
-        }
-        Msg::BannerFocusTypeToggle => {
-            model.banner.new_units = !model.banner.new_units;
-            model.data.clear();
         }
         Msg::BannerSet { banner } => {
             model.banner = banner;
@@ -247,9 +243,9 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 model.data.clear();
             }
         }
-        Msg::GoalPartColorChange { index, color } => {
+        Msg::GoalPartItemTypeChange { index, item_type } => {
             if let Goal::Custom(custom_goal) = &mut model.goal {
-                custom_goal.goals[index].unit_color = color;
+                custom_goal.goals[index].item_type = item_type;
                 model.data.clear();
             }
         }
@@ -272,10 +268,10 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 model.data.clear();
             }
         }
-        Msg::GoalPartAdd { color, quantity } => {
+        Msg::GoalPartAdd { item_type, quantity } => {
             if let Goal::Custom(custom_goal) = &mut model.goal {
                 custom_goal.goals.push(GoalPart {
-                    unit_color: color,
+                    item_type: item_type,
                     num_copies: quantity,
                     four_star: false,
                 });

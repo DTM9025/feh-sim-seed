@@ -1,19 +1,14 @@
 use crate::*;
 
 use rand::distributions::Distribution;
+use rand::distributions::Bernoulli;
 
 use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
 
-use weighted_choice::{WeightedIndex4, WeightedIndex5};
+use weighted_choice::{WeightedIndex2, WeightedIndex5};
 
 use goal::{CustomGoal, GoalKind};
-
-/// The results of a pull session.
-struct SessionResult {
-    chosen_count: u32,
-    reset: bool,
-}
 
 /// A structure holding the information for a sequence of summoning
 /// sessions done until a certain goal is reached. Keeps some cached information
@@ -24,28 +19,27 @@ pub struct Sim {
     goal: CustomGoal,
     tables: RandTables,
     rng: SmallRng,
+    bernouli: Bernoulli,
     goal_data: GoalData,
 }
 
 /// Precalculated tables for the probabilities of units being randomly chosen.
 #[derive(Debug, Copy, Clone, Default)]
 struct RandTables {
-    pool_sizes: [[u8; 4]; 5],
-    pool_dists: [WeightedIndex5; 26],
-    color_dists: [WeightedIndex4; 5],
+    pool_dists: [WeightedIndex5; 2],
+    item_dists: [WeightedIndex2; 5],
 }
 
 /// Scratch space for representing the goal in a way that is faster to work with.
 #[derive(Debug, Clone)]
 struct GoalData {
-    pub is_fourstar_focus: bool,
-    pub color_needed: [bool; 4],
+    pub items_needed: [bool; 4],
     pub copies_needed: [Vec<u8>; 4],
 }
 
 impl GoalData {
     fn is_met(&self) -> bool {
-        self.color_needed == [false, false, false, false]
+        self.items_needed == [false, false, false, false]
     }
 }
 
@@ -59,9 +53,9 @@ impl Sim {
             goal: goal.as_custom(&banner),
             tables: RandTables::default(),
             rng: SmallRng::from_entropy(),
+            bernouli: Bernoulli::from_ratio(banner.split_rates.0 as u32, 100).unwrap(),
             goal_data: GoalData {
-                is_fourstar_focus: banner.fourstar_focus.is_some(),
-                color_needed: [false; 4],
+                items_needed: [false; 4],
                 copies_needed: [vec![], vec![], vec![], vec![]],
             },
         };
@@ -71,209 +65,173 @@ impl Sim {
 
     /// Initializes the precalculated tables used for fast random sampling.
     fn init_probability_tables(&mut self) {
-        self.tables.pool_sizes = [
-            [0, 0, 0, 0],
-            if self.banner.new_units {
-                [36, 26, 25, 18]
-            } else {
-                [56, 37, 33, 26]
-            },
-            [0, 0, 0, 0],
-            [33, 34, 24, 34],
-            [33, 33, 24, 34],
-        ];
-        for i in 0..4 {
-            self.tables.pool_sizes[0][i] = self.banner.focus_sizes[i].max(0) as u8;
-        }
-        if let Some(color) = self.banner.fourstar_focus {
-            self.tables.pool_sizes[2][color as usize] = 1;
-        }
-
-        for color in 0..5 {
-            self.tables.color_dists[color] = WeightedIndex4::new(self.tables.pool_sizes[color]);
-        }
-
-        for pity_incr in 0..26 {
-            self.tables.pool_dists[pity_incr] =
-                WeightedIndex5::new(self.probabilities(pity_incr as u32));
-        }
+        self.tables.pool_dists[0] = WeightedIndex5::new(self.bases());
+        self.tables.pool_dists[1] = WeightedIndex5::new(self.soft_pity_bases());
     }
 
     // Initializes the internal representation of a goal.
     fn init_goal_data(&mut self) {
-        self.goal_data.color_needed = [false, false, false, false];
-        self.goal_data.is_fourstar_focus = false;
+        self.goal_data.items_needed = [false, false, false, false];
         for i in 0..4 {
             self.goal_data.copies_needed[i].clear();
         }
         for &goal in &self.goal.goals {
-            self.goal_data.copies_needed[goal.unit_color as usize].push(goal.num_copies);
-            self.goal_data.color_needed[goal.unit_color as usize] = true;
-            if goal.four_star {
-                self.goal_data.is_fourstar_focus = true;
-            }
+            self.goal_data.copies_needed[goal.item_type as usize].push(goal.num_copies);
+            self.goal_data.items_needed[goal.item_type as usize] = true;
         }
     }
 
-    /// Simulates until reaching the current goal, then returns # of orbs used.
+    /// Simulates until reaching the current goal, then returns # of pulls done.
     pub fn roll_until_goal(&mut self) -> u32 {
-        let mut pity_count = 0;
-        let mut orb_count = 0;
+        let mut five_pity_count = 0;
+        let mut four_pity_count = 0;
+        let mut five_focus_guarantee = false;
+        let mut four_focus_guarantee = false;
+
+        let mut pull_count = 0 as u32;
         self.init_goal_data();
         loop {
-            let pity_incr = pity_count / 5;
-            let samples = [
-                self.sample(pity_incr),
-                self.sample(pity_incr),
-                self.sample(pity_incr),
-                self.sample(pity_incr),
-                self.sample(pity_incr),
-            ];
-            let SessionResult {
-                chosen_count,
-                reset,
-            } = self.session_select(&samples);
-            if reset {
-                pity_count = 0;
-            } else {
-                pity_count += chosen_count;
-            }
-            orb_count += Sim::orb_cost(chosen_count);
-            if self.goal_data.is_met() {
-                return orb_count;
-            }
-        }
-    }
+            let soft_pity = five_pity_count >= (self.banner.soft_pity - 1) as u32;
+            let five_pity = five_pity_count >= (self.banner.hard_pity - 1) as u32;
+            let four_pity = four_pity_count >= 9;
 
-    /// Given a session with five randomly-selected units, decides which ones
-    /// would be chosen to achieve the current goal, then evaluates the results
-    /// of choosing them.
-    fn session_select(&mut self, samples: &[(Pool, Color); 5]) -> SessionResult {
-        let mut result = SessionResult {
-            chosen_count: 0,
-            reset: false,
-        };
-        for i in 0..5 {
-            let sample = samples[i];
-            if self.may_match_goal(sample.1) {
-                result.chosen_count += 1;
-                result.reset |= self.pull_orb(sample);
-                if self.goal_data.is_met() {
-                    return result;
+            let sampled_pool = self.sample_pool(five_pity, four_pity, five_focus_guarantee, four_focus_guarantee, soft_pity);
+            
+            self.pull_item(sampled_pool);
+
+            match sampled_pool {
+                Pool::FivestarFocus => {
+                    five_pity_count = 0;
+                    four_pity_count = 0;
+                    five_focus_guarantee = false;
+                }
+                Pool::Fivestar => {
+                    five_pity_count = 0;
+                    four_pity_count = 0;
+                    five_focus_guarantee = true;
+                }
+                Pool::FourstarFocus => {
+                    four_pity_count = 0;
+                    four_focus_guarantee = false;
+                }
+                Pool::Fourstar => {
+                    four_pity_count = 0;
+                    four_focus_guarantee = true;
+                }
+                _ => {
+                    five_pity_count += 1;
+                    four_pity_count += 1;
                 }
             }
-        }
-        if result.chosen_count == 0 {
-            // None with the color we want, so pick randomly
-            let sample = samples[self.rng.gen::<usize>() % samples.len()];
-            result.reset |= self.pull_orb(sample);
-            result.chosen_count = 1;
-        }
-        result
-    }
 
-    /// Specifies whether the color has the possibility of contributing towards
-    /// completing the current goal.
-    fn may_match_goal(&self, color: Color) -> bool {
-        self.goal_data.color_needed[color as usize]
+            pull_count += 1;
+
+            if self.goal_data.is_met() {
+                return pull_count;
+            }
+        }
     }
 
     /// Evaluates the result of selecting the given sample. Returns `true` if the
     /// sample made the rate increase reset.
-    fn pull_orb(&mut self, sample: (Pool, Color)) -> bool {
-        let color = sample.1;
-        let do_reset = sample.0 == Pool::Focus || sample.0 == Pool::Fivestar;
-        if sample.0 == Pool::Threestar
-            || sample.0 == Pool::Fourstar
-            || sample.0 == Pool::Fivestar
-            || (sample.0 == Pool::FourstarFocus && !self.goal_data.is_fourstar_focus)
-            || !self.goal_data.color_needed[color as usize]
+    fn pull_item(&mut self, sample_pool: Pool) {
+        if sample_pool == Pool::Threestar
+            || sample_pool == Pool::Fourstar
+            || sample_pool == Pool::Fivestar
         {
-            return do_reset;
+            return;
         }
-        let focus_count = self.banner.focus_sizes[color as usize];
-        let which_unit = if sample.0 == Pool::FourstarFocus {
-            0
+
+        let focus_count = if sample_pool == Pool::FivestarFocus {
+            self.banner.focus_sizes[0] + self.banner.focus_sizes[1]
         } else {
-            self.rng.gen::<usize>() % focus_count as usize
+            self.banner.focus_sizes[2] + self.banner.focus_sizes[3]
         };
-        if which_unit < self.goal_data.copies_needed[color as usize].len() {
-            if self.goal_data.copies_needed[color as usize][which_unit] > 1 {
-                self.goal_data.copies_needed[color as usize][which_unit] -= 1;
+        let which_unit = self.rng.gen::<usize>() % focus_count as usize;
+
+        let (idx, idy) = if sample_pool == Pool::FivestarFocus && which_unit < self.banner.focus_sizes[0] as usize {
+            (0, which_unit)
+        } else if sample_pool == Pool::FivestarFocus {
+            (1, which_unit - self.banner.focus_sizes[0] as usize)
+        } else if which_unit < self.banner.focus_sizes[2] as usize {
+            (2, which_unit)
+        } else {
+            (3, which_unit - self.banner.focus_sizes[2] as usize)
+        };
+
+        if idy < self.goal_data.copies_needed[idx].len() {
+            if self.goal_data.copies_needed[idx][idy] > 1 {
+                self.goal_data.copies_needed[idx][idy] -= 1;
             } else {
-                self.goal_data.copies_needed[color as usize].remove(which_unit);
+                self.goal_data.copies_needed[idx].remove(idy);
                 if self.goal.kind == GoalKind::Any {
-                    self.goal_data.color_needed = [false, false, false, false];
-                } else if self.goal_data.copies_needed[color as usize].len() == 0 {
-                    self.goal_data.color_needed[color as usize] = false;
+                    self.goal_data.items_needed = [false, false, false, false];
+                } else if self.goal_data.copies_needed[idx].len() == 0 {
+                    self.goal_data.items_needed[idx] = false;
                 }
             }
-        }
-        return do_reset;
-    }
-
-    /// The total orb cost of choosing the given number of units from a session.
-    fn orb_cost(count: u32) -> u32 {
-        match count {
-            1 => 5,
-            2 => 9,
-            3 => 13,
-            4 => 17,
-            5 => 20,
-            _ => panic!("Invalid orb cost: {}", count),
         }
     }
 
     /// Chooses a weighted random unit from the summoning pool. `pity_incr` is the
     /// number of times that the 5* rates have increased by 0.5% total.
-    fn sample(&mut self, pity_incr: u32) -> (Pool, Color) {
-        let pool = self.tables.pool_dists[pity_incr as usize].sample(&mut self.rng) as u8;
-        let color = self.tables.color_dists[pool as usize].sample(&mut self.rng) as u8;
-        (
-            Pool::try_from(pool).unwrap(),
-            Color::try_from(color).unwrap(),
-        )
-    }
-
-    /// Calculates the actual probabilities of selecting a unit from each of the four
-    /// possible pools after a certain number of rate increases.
-    fn probabilities(&self, pity_incr: u32) -> [f32; 5] {
-        let bases = self.bases();
-        let pity_pct = if pity_incr >= 25 {
-            100.0 - bases[Pool::Focus as usize] - bases[1]
+    fn sample_pool(&mut self, five_pity: bool, four_pity: bool, five_focus: bool, four_focus: bool, soft_pity: bool) -> Pool {
+        let pool = if soft_pity {
+            Pool::try_from(self.tables.pool_dists[1].sample(&mut self.rng) as u8).unwrap()
         } else {
-            pity_incr as f32 * 0.5
+            Pool::try_from(self.tables.pool_dists[0].sample(&mut self.rng) as u8).unwrap()
         };
 
-        let mut probabilities = bases;
-        let focus_ratio = bases[Pool::Focus as usize]
-            / (bases[Pool::Focus as usize] + bases[Pool::Fivestar as usize]);
-        probabilities[Pool::Focus as usize] += pity_pct * focus_ratio;
-        probabilities[Pool::Fivestar as usize] += pity_pct * (1.0 - focus_ratio);
-
-        let lower_ratio = bases[Pool::Fourstar as usize]
-            / (bases[Pool::Fourstar as usize] + bases[Pool::Threestar as usize]);
-        probabilities[Pool::Fourstar as usize] -= pity_pct * lower_ratio;
-        probabilities[Pool::Threestar as usize] -= pity_pct * (1.0 - lower_ratio);
-        probabilities
+        if five_pity && five_focus {
+            return Pool::FivestarFocus;
+        } else if five_pity && !(pool == Pool::Fivestar || pool == Pool::FivestarFocus) {
+            if self.bernouli.sample(&mut self.rng) {
+                return Pool::FivestarFocus;
+            }
+            return Pool::Fivestar;
+        } else if five_focus && pool == Pool::Fivestar {
+            return Pool::FivestarFocus
+        } else if four_pity && four_focus && !(pool == Pool::Fivestar || pool == Pool::FivestarFocus) {
+            return Pool::FourstarFocus;
+        } else if four_pity && pool == Pool::Threestar {
+            if self.bernouli.sample(&mut self.rng) {
+                return Pool::FourstarFocus;
+            }
+            return Pool::Fourstar;
+        } else if four_focus && pool == Pool::Fourstar {
+            return Pool::FourstarFocus
+        } else {
+            return pool;
+        }
     }
 
     /// Gives the base probabilities of selecting a unit from each pool.
     fn bases(&self) -> [f32; 5] {
-        let (focus, fivestar) = self.banner.starting_rates;
-        if self.banner.fourstar_focus.is_some() {
-            [3.0, 3.0, 3.0, 55.0, 36.0]
-        } else if (focus, fivestar) == (6, 0) {
-            // The lower-rarity breakdown on this new banner is different
-            // for no apparent reason
-            [6.0, 0.0, 0.0, 60.0, 34.0]
-        } else {
-            let focus = focus as f32;
-            let fivestar = fivestar as f32;
-            let fivestar_total = focus + fivestar;
-            let fourstar = (100.0 - fivestar_total) * 58.0 / 94.0;
-            let threestar = (100.0 - fivestar_total) * 36.0 / 94.0;
-            [focus, fivestar, 0.0, fourstar, threestar]
-        }
+        let fiverate = (self.banner.five_rate as f32) / 10.0;
+        let fourrate = (self.banner.four_rate as f32) / 10.0;
+        let (focus, nonfocus) = self.banner.split_rates;
+
+        let fivefocus = fiverate * (focus as f32) / 100.0;
+        let fivestar = fiverate * (nonfocus as f32) / 100.0;
+        let fourfoucs = fourrate * (focus as f32) / 100.0;
+        let fourstar =fourrate * (nonfocus as f32) / 100.0;
+        let threestar = 100.0 - fiverate - fourrate;
+        [fivefocus, fivestar, fourfoucs, fourstar, threestar]
+
+    }
+
+    /// Gives the base probabilities of selecting a unit from each pool with soft pity.
+    fn soft_pity_bases(&self) -> [f32; 5] {
+        let fiverate = 32.0;
+        let fourrate = (self.banner.four_rate as f32) / 10.0;
+        let (focus, nonfocus) = self.banner.split_rates;
+
+        let fivefocus = fiverate * (focus as f32) / 100.0;
+        let fivestar = fiverate * (nonfocus as f32) / 100.0;
+        let fourfoucs = fourrate * (focus as f32) / 100.0;
+        let fourstar =fourrate * (nonfocus as f32) / 100.0;
+        let threestar = 100.0 - fiverate - fourrate;
+        [fivefocus, fivestar, fourfoucs, fourstar, threestar]
+
     }
 }
