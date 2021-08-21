@@ -6,8 +6,6 @@ use rand::distributions::Bernoulli;
 use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
 
-use weighted_choice::WeightedIndex5;
-
 use goal::{CustomGoal, GoalKind};
 
 /// A structure holding the information for a sequence of summoning
@@ -17,16 +15,9 @@ use goal::{CustomGoal, GoalKind};
 pub struct Sim {
     banner: Banner,
     goal: CustomGoal,
-    tables: RandTables,
     rng: SmallRng,
     bernouli: Bernoulli,
     goal_data: GoalData,
-}
-
-/// Precalculated tables for the probabilities of units being randomly chosen.
-#[derive(Debug, Copy, Clone, Default)]
-struct RandTables {
-    pool_dists: [WeightedIndex5; 2],
 }
 
 /// Scratch space for representing the goal in a way that is faster to work with.
@@ -47,10 +38,9 @@ impl Sim {
     /// moderately expensive initialization. Avoid running in a hot loop, but
     /// it's not a problem to call somewhat frequently.
     pub fn new(banner: Banner, goal: Goal) -> Self {
-        let mut sim = Sim {
+        let sim = Sim {
             banner,
             goal: goal.as_custom(&banner),
-            tables: RandTables::default(),
             rng: SmallRng::from_entropy(),
             bernouli: Bernoulli::from_ratio(banner.split_rates.0 as u32, 100).unwrap(),
             goal_data: GoalData {
@@ -58,14 +48,7 @@ impl Sim {
                 copies_needed: [vec![], vec![], vec![], vec![]],
             },
         };
-        sim.init_probability_tables();
         sim
-    }
-
-    /// Initializes the precalculated tables used for fast random sampling.
-    fn init_probability_tables(&mut self) {
-        self.tables.pool_dists[0] = WeightedIndex5::new(self.bases());
-        self.tables.pool_dists[1] = WeightedIndex5::new(self.soft_pity_bases());
     }
 
     // Initializes the internal representation of a goal.
@@ -82,41 +65,49 @@ impl Sim {
 
     /// Simulates until reaching the current goal, then returns # of pulls done.
     pub fn roll_until_goal(&mut self) -> u32 {
-        let mut five_pity_count = 0;
-        let mut four_pity_count = 0;
+        let mut five_pity_count = 1;
+        let mut four_pity_count = 1;
         let mut five_focus_guarantee = false;
         let mut four_focus_guarantee = false;
 
         let mut pull_count = 0 as u32;
         self.init_goal_data();
         loop {
-            let soft_pity = five_pity_count >= (self.banner.soft_pity - 1) as u32;
-            let five_pity = five_pity_count >= (self.banner.hard_pity - 1) as u32;
-            let four_pity = four_pity_count >= 9;
+            let five_prob = if five_pity_count > self.banner.five_pity {
+                self.banner.five_rate + (five_pity_count - self.banner.five_pity) * 10 * self.banner.five_rate
+            } else {
+                self.banner.five_rate
+            };
 
-            let sampled_pool = self.sample_pool(five_pity, four_pity, five_focus_guarantee, four_focus_guarantee, soft_pity);
+            let four_prob = if four_pity_count > self.banner.four_pity {
+                self.banner.four_rate + (four_pity_count - self.banner.four_pity) * 10 * self.banner.four_rate
+            } else {
+                self.banner.four_rate
+            };
+
+            let sampled_pool = self.sample_pool(five_prob as f32 / 1000.0, four_prob as f32 / 1000.0, five_focus_guarantee, four_focus_guarantee);
             
             self.pull_item(sampled_pool);
 
             match sampled_pool {
                 Pool::FivestarFocus => {
-                    five_pity_count = 0;
-                    four_pity_count = 0;
+                    five_pity_count = 1;
+                    four_pity_count += 1;
                     five_focus_guarantee = false;
                 }
                 Pool::Fivestar => {
-                    five_pity_count = 0;
-                    four_pity_count = 0;
+                    five_pity_count = 1;
+                    four_pity_count += 1;
                     five_focus_guarantee = true;
                 }
                 Pool::FourstarFocus => {
                     five_pity_count += 1;
-                    four_pity_count = 0;
+                    four_pity_count = 1;
                     four_focus_guarantee = false;
                 }
                 Pool::Fourstar => {
                     five_pity_count += 1;
-                    four_pity_count = 0;
+                    four_pity_count = 1;
                     four_focus_guarantee = true;
                 }
                 _ => {
@@ -176,63 +167,25 @@ impl Sim {
 
     /// Chooses a weighted random unit from the summoning pool. `pity_incr` is the
     /// number of times that the 5* rates have increased by 0.5% total.
-    fn sample_pool(&mut self, five_pity: bool, four_pity: bool, five_focus: bool, four_focus: bool, soft_pity: bool) -> Pool {
-        let pool = if soft_pity {
-            Pool::try_from(self.tables.pool_dists[1].sample(&mut self.rng) as u8).unwrap()
-        } else {
-            Pool::try_from(self.tables.pool_dists[0].sample(&mut self.rng) as u8).unwrap()
-        };
+    fn sample_pool(&mut self, five_prob: f32, four_prob: f32, five_focus: bool, four_focus: bool) -> Pool {
+        let choice = self.rng.gen::<f32>();
 
-        if five_pity && five_focus {
+        if choice < five_prob && five_focus {
             return Pool::FivestarFocus;
-        } else if five_pity && !(pool == Pool::Fivestar || pool == Pool::FivestarFocus) {
+        } else if choice < five_prob {
             if self.bernouli.sample(&mut self.rng) {
                 return Pool::FivestarFocus;
             }
             return Pool::Fivestar;
-        } else if five_focus && pool == Pool::Fivestar {
-            return Pool::FivestarFocus
-        } else if four_pity && four_focus && !(pool == Pool::Fivestar || pool == Pool::FivestarFocus) {
+        } else if choice < five_prob + four_prob && four_focus {
             return Pool::FourstarFocus;
-        } else if four_pity && pool == Pool::Threestar {
+        } else if choice < five_prob + four_prob {
             if self.bernouli.sample(&mut self.rng) {
                 return Pool::FourstarFocus;
             }
             return Pool::Fourstar;
-        } else if four_focus && pool == Pool::Fourstar {
-            return Pool::FourstarFocus
         } else {
-            return pool;
+            return Pool::Threestar;
         }
-    }
-
-    /// Gives the base probabilities of selecting a unit from each pool.
-    fn bases(&self) -> [f32; 5] {
-        let fiverate = (self.banner.five_rate as f32) / 10.0;
-        let fourrate = (self.banner.four_rate as f32) / 10.0;
-        let (focus, nonfocus) = self.banner.split_rates;
-
-        let fivefocus = fiverate * (focus as f32) / 100.0;
-        let fivestar = fiverate * (nonfocus as f32) / 100.0;
-        let fourfoucs = fourrate * (focus as f32) / 100.0;
-        let fourstar =fourrate * (nonfocus as f32) / 100.0;
-        let threestar = 100.0 - fiverate - fourrate;
-        [fivefocus, fivestar, fourfoucs, fourstar, threestar]
-
-    }
-
-    /// Gives the base probabilities of selecting a unit from each pool with soft pity.
-    fn soft_pity_bases(&self) -> [f32; 5] {
-        let fiverate = 32.0;
-        let fourrate = (self.banner.four_rate as f32) / 10.0;
-        let (focus, nonfocus) = self.banner.split_rates;
-
-        let fivefocus = fiverate * (focus as f32) / 100.0;
-        let fivestar = fiverate * (nonfocus as f32) / 100.0;
-        let fourfoucs = fourrate * (focus as f32) / 100.0;
-        let fourstar =fourrate * (nonfocus as f32) / 100.0;
-        let threestar = 100.0 - fiverate - fourrate;
-        [fivefocus, fivestar, fourfoucs, fourstar, threestar]
-
     }
 }

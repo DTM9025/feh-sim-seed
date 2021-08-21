@@ -69,10 +69,10 @@ fn graph_line(data: &Counter, highlight: Option<f32>) -> (Node<Msg>, Node<Msg>) 
             "cy" => y(value);
             "r" => "0.75px";
         ]]);
-        let label_text = format!("{}%: {} pulls", (pct * 1000.0).round() / 10.0, value);
+        let label_text = format!("{}%: {} primogems", (pct * 1000.0).round() / 10.0, value * 160.0);
         points_el.add_child(text![
             attrs![
-                "font-size" => "15%";
+                "font-size" => "13%";
             ],
             // By default, put the label up and to the left of the point.
             if pct > 0.24 {

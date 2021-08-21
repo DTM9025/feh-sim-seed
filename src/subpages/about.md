@@ -13,3 +13,11 @@ This web application is based on FEH Statistics by Minno726, from which it was f
 
 * Website: [https://fullyconcentrated.net/fehstatsim/](https://fullyconcentrated.net/fehstatsim/)
 * Source: [https://github.com/minno726/feh-sim-seed](https://github.com/minno726/feh-sim-seed)
+
+### Assumptions About Soft Pity Mechanics
+
+Due to the fact that the exact mechanics of soft pity, and the gacha system in general, are unknown, there are
+certain assumption that had to be made when building this statistic simulator.
+
+The model used is based on the statistics given in this post:
+* [https://www.hoyolab.com/genshin/article/497840](https://www.hoyolab.com/genshin/article/497840)

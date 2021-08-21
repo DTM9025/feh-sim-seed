@@ -20,8 +20,6 @@ mod results;
 mod sim;
 use sim::Sim;
 
-mod weighted_choice;
-
 mod stats;
 
 mod counter;
@@ -136,7 +134,7 @@ pub enum Msg {
     /// Change the number of focus units for a given color.
     BannerFocusSizeChange { item_type: ItemType, quantity: i8 },
     /// Change the starting rates.
-    BannerRateChange { five_rate: u8, four_rate: u8, split_rates: (u8, u8), soft_pity: u8, hard_pity: u8 },
+    BannerRateChange { five_rate: u16, four_rate: u16, split_rates: (u8, u8), five_pity: u16, four_pity: u16 },
     /// Replace the banner with a new one.
     BannerSet { banner: Banner },
     /// Set the goal to a certain preset.
@@ -180,12 +178,12 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             model.banner.focus_sizes[item_type as usize] = quantity;
             model.data.clear();
         }
-        Msg::BannerRateChange { five_rate, four_rate, split_rates, soft_pity, hard_pity } => {
+        Msg::BannerRateChange { five_rate, four_rate, split_rates, five_pity, four_pity } => {
             model.banner.five_rate = five_rate;
             model.banner.four_rate = four_rate;
             model.banner.split_rates = split_rates;
-            model.banner.soft_pity = soft_pity;
-            model.banner.hard_pity = hard_pity;
+            model.banner.five_pity = five_pity;
+            model.banner.four_pity = four_pity;
             model.data.clear();
             if split_rates == (50, 50) {
                 // Character Event Wish
@@ -335,7 +333,7 @@ fn main_page(model: &Model) -> Vec<Node<Msg>> {
                     At::Href => "/genshinstatsim/help";
                 ],
             ],
-            " | v0.0.1 ",
+            " | v0.0.2 ",
             a![
                 "Changelog",
                 attrs![

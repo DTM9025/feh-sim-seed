@@ -6,11 +6,11 @@ use crate::{ItemType, Msg};
 #[derive(Copy, Clone, PartialEq, Eq, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Banner {
     pub focus_sizes: [i8; 4],
-    pub five_rate: u8,
-    pub four_rate: u8,
+    pub five_rate: u16,
+    pub four_rate: u16,
     pub split_rates: (u8, u8),
-    pub soft_pity: u8,
-    pub hard_pity: u8
+    pub five_pity: u16,
+    pub four_pity: u16
 }
 
 impl Default for Banner {
@@ -20,8 +20,8 @@ impl Default for Banner {
             five_rate: 6,
             four_rate: 51,
             split_rates: (50, 50),
-            soft_pity: 75,
-            hard_pity: 90,
+            five_pity: 73,
+            four_pity: 8,
         }
     }
 }
@@ -36,9 +36,9 @@ impl Banner {
 
 /// Section for choosing banner parameters.
 pub fn banner_selector(banner: &Banner) -> Node<Msg> {
-    let rate_option = |five_rate: u8, four_rate: u8, split_rates: (u8, u8), soft_pity: u8, hard_pity: u8, label: &str| -> Node<Msg> {
+    let rate_option = |five_rate: u8, four_rate: u8, split_rates: (u8, u8), five_pity: u8, four_pity: u8, label: &str| -> Node<Msg> {
         let mut attrs = attrs![
-            At::Value => format!("{} {} {} {} {} {}", five_rate, four_rate, split_rates.0, split_rates.1, soft_pity, hard_pity);
+            At::Value => format!("{} {} {} {} {} {}", five_rate, four_rate, split_rates.0, split_rates.1, five_pity, four_pity);
         ];
         if split_rates == banner.split_rates {
             attrs.add(At::Selected, "");
@@ -57,19 +57,19 @@ pub fn banner_selector(banner: &Banner) -> Node<Msg> {
                         .collect::<Vec<_>>()
                     {
                         Msg::BannerRateChange {
-                            five_rate: first,
-                            four_rate: second,
+                            five_rate: first as u16,
+                            four_rate: second as u16,
                             split_rates: (third, fourth),
-                            soft_pity: fifth,
-                            hard_pity: sixth,
+                            five_pity: fifth as u16,
+                            four_pity: sixth as u16,
                         }
                     } else {
                         Msg::Null
                     }
                 }),
-                rate_option(6, 51, (50, 50), 75, 90, "Character Event Wish"),
-                rate_option(7, 60, (75, 25), 65, 80, "Weapon Event Wish"),
-                rate_option(6, 51, (100, 0), 75, 90, "Standard Wish"),
+                rate_option(6, 51, (50, 50), 73, 8, "Character Event Wish"),
+                rate_option(7, 60, (75, 25), 62, 7, "Weapon Event Wish"),
+                rate_option(6, 51, (100, 0), 73, 8, "Standard Wish"),
             ],
         ],
         div![
