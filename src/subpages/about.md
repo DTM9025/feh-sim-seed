@@ -21,3 +21,8 @@ certain assumption that had to be made when building this statistic simulator.
 
 The model used is based on the statistics given in this post:
 * [https://www.hoyolab.com/genshin/article/497840](https://www.hoyolab.com/genshin/article/497840)
+
+### Note on Epitomized Path
+
+Note that currently, the Epitomized Path mechanic for Weapon Banners has not been implemented yet. This
+mechanic will hopefully be included in this simulator in the near future.

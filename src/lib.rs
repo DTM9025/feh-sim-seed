@@ -115,6 +115,8 @@ struct Model {
     pub curr_page: Page,
     /// The point on the graph that the user has chose to highlight.
     pub graph_highlight: Option<f32>,
+    /// Toggles whether or not the graph shows amount of pulls or primogems.
+    pub show_primo: bool,
 }
 
 // Update
@@ -159,6 +161,8 @@ pub enum Msg {
     Permalink,
     /// Highlight a point on the graph.
     GraphHighlight { frac: f32 },
+    /// Toggles whether or not the graph shows pulls or primogem amounts.
+    GraphAmountTypeToggle,
 }
 
 /// Update model with the given message.
@@ -195,7 +199,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 // Standard Wish
                 // Note that because there is no focus, we
                 // simulate this by having all items in focus.
-                model.banner.focus_sizes = [5, 10, 16, 18];
+                model.banner.focus_sizes = [5, 10, 19, 18];
             }
         }
         Msg::BannerSet { banner } => {
@@ -301,6 +305,9 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         Msg::GraphHighlight { frac } => {
             model.graph_highlight = Some(frac);
         }
+        Msg::GraphAmountTypeToggle => {
+            model.show_primo = !model.show_primo;
+        }
     }
 }
 
@@ -333,7 +340,7 @@ fn main_page(model: &Model) -> Vec<Node<Msg>> {
                     At::Href => "/genshinstatsim/help";
                 ],
             ],
-            " | v0.0.2 ",
+            " | v0.0.3 ",
             a![
                 "Changelog",
                 attrs![
@@ -360,8 +367,14 @@ fn main_page(model: &Model) -> Vec<Node<Msg>> {
                     if model.data.is_empty() { "Run" } else { "More" }
                 ],
                 permalink(),
+                input![
+                    id!["pull_primo_toggle"],
+                    simple_ev(Ev::Input, Msg::GraphAmountTypeToggle),
+                    if model.show_primo { attrs![At::Type => "checkbox"; At::Checked => "true"] } else { attrs![At::Type => "checkbox"] }
+                ],
+                label![style![St::PaddingLeft => em(0.25)], attrs![At::For => "pull_primo_toggle"], " Show # of Primogems?"]
             ],
-            results::results(&model.data, model.graph_highlight),
+            results::results(&model.data, model.graph_highlight,  model.show_primo),
         ],
     ]
 }
@@ -370,6 +383,7 @@ fn permalink() -> Node<Msg> {
     svg![
         id!["permalink"],
         class!["padleft"],
+        style![St::PaddingRight => em(0.5)],
         simple_ev(Ev::Click, Msg::Permalink),
         attrs![
             At::ViewBox => "0 0 150 50";

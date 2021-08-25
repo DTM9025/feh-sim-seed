@@ -8,10 +8,10 @@ mod svg_graph;
 /// Section for displaying the results. If `highlight` is given, places a label
 /// on the graph at the specified point. Otherwise, labels are placed at pre-set
 /// locations.
-pub fn results(data: &Counter, highlight: Option<f32>) -> Node<Msg> {
+pub fn results(data: &Counter, highlight: Option<f32>, show_primo: bool) -> Node<Msg> {
     div![
         id!["results"],
         class!["no-select"],
-        svg_graph::graph(data, highlight),
+        svg_graph::graph(data, highlight, show_primo),
     ]
 }

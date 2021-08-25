@@ -16,7 +16,7 @@ const HEIGHT: f32 = 60.0;
 /// given, places a label on the graph at the specified point. Otherwise, labels
 /// are placed at pre-set locations. Returns two elements, one for the line and
 /// one for the collection of labels.
-fn graph_line(data: &Counter, highlight: Option<f32>) -> (Node<Msg>, Node<Msg>) {
+fn graph_line(data: &Counter, highlight: Option<f32>, show_primo: bool) -> (Node<Msg>, Node<Msg>) {
     // Sample every 0.1% in ranges 0%-10% and 90%-100%, and every 1% in between.
     // Probabilities only change sharply near the extremes, so this makes things
     // render more quickly without hurting smoothness.
@@ -69,7 +69,11 @@ fn graph_line(data: &Counter, highlight: Option<f32>) -> (Node<Msg>, Node<Msg>) 
             "cy" => y(value);
             "r" => "0.75px";
         ]]);
-        let label_text = format!("{}%: {} primogems", (pct * 1000.0).round() / 10.0, value * 160.0);
+        let label_text = if show_primo {
+            format!("{}%: {} primogems", (pct * 1000.0).round() / 10.0, value * 160.0)
+        }  else {
+            format!("{}%: {} pulls", (pct * 1000.0).round() / 10.0, value)
+        };
         points_el.add_child(text![
             attrs![
                 "font-size" => "13%";
@@ -122,8 +126,8 @@ fn graph_line(data: &Counter, highlight: Option<f32>) -> (Node<Msg>, Node<Msg>) 
 /// Graph for displaying the results. If `highlight` is given, places a label
 /// on the graph at the specified point. Otherwise, labels are placed at pre-set
 /// locations.
-pub fn graph(data: &Counter, highlight: Option<f32>) -> Node<Msg> {
-    let (path_el, points_el) = graph_line(data, highlight);
+pub fn graph(data: &Counter, highlight: Option<f32>, show_primo: bool) -> Node<Msg> {
+    let (path_el, points_el) = graph_line(data, highlight, show_primo);
     fn get_graph_width(event: &web_sys::Event) -> Option<f64> {
         let target = event.target()?;
         let target_el: &web_sys::Element = target.dyn_ref::<web_sys::SvgsvgElement>()?.as_ref();

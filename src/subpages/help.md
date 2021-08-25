@@ -13,15 +13,15 @@ Choose a goal from the dropdown menu. The options are:
 
 * **Custom goal** - details below.
 * **Any 5\* focus item** - pulls until any 5* focus item appears.
-* **Any 5\* focus charcter** - pulls unitl any 5* focus character appears.
-* **Specific 5\* focus charcter** - pulls unitl a certain number of a specific 5* focus character appears.
-* **Any 5\* focus weapon** - pulls unitl any 5* focus weapon appears.
-* **Specific 5\* focus weapon** - pulls unitl a certain number of a specific 5* focus weapon appears.
+* **Any 5\* focus charcter** - pulls until any 5* focus character appears.
+* **Specific 5\* focus charcter** - pulls until a specified number of a specific 5* focus character appears.
+* **Any 5\* focus weapon** - pulls until any 5* focus weapon appears.
+* **Specific 5\* focus weapon** - pulls until a specified number of a specific 5* focus weapon appears.
 * **Any 4\* focus item** - pulls until any 4* focus item appears.
-* **Any 4\* focus charcter** - pulls unitl any 4* focus character appears.
-* **Specific 4\* focus charcter** - pulls unitl a certain number of a specific 4* focus character appears.
-* **Any 4\* focus weapon** - pulls unitl any 4* focus weapon appears.
-* **Specific 4\* focus weapon** - pulls unitl a certain number of a specific 4* focus weapon appears.
+* **Any 4\* focus charcter** - pulls until any 4* focus character appears.
+* **Specific 4\* focus charcter** - pulls until a specified number of a specific 4* focus character appears.
+* **Any 4\* focus weapon** - pulls until any 4* focus weapon appears.
+* **Specific 4\* focus weapon** - pulls until a specified number of a specific 4* focus weapon appears.
 
 #### Custom goals
 
