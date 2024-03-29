@@ -61,6 +61,15 @@ impl Sim {
             self.goal_data.copies_needed[goal.item_type as usize].push(goal.num_copies);
             self.goal_data.items_needed[goal.item_type as usize] = true;
         }
+
+        // When having multiple goals in Epitomized Path, the opitimal strategy
+        // is to select the weapon with the highest amount of copies needed.
+        // Our Epitomized Path implementation assumes the selected one is always
+        // at index 0, so we sort the goals for 5* Weapons from highest to lowest
+        // copies needed to choose the optimal selection.
+        // if self.banner.epitomized_path {
+        //     self.goal_data.copies_needed[ItemType::FiveWeapon as usize].sort_by(|x, y| y.cmp(x))
+        // }
     }
 
     /// Simulates until reaching the current goal, then returns # of pulls done.
@@ -69,6 +78,7 @@ impl Sim {
         let mut four_pity_count = 1;
         let mut five_focus_guarantee = false;
         let mut four_focus_guarantee = false;
+        let mut fate_points = 0;
 
         let mut pull_count = 0 as u32;
         self.init_goal_data();
@@ -86,8 +96,6 @@ impl Sim {
             };
 
             let sampled_pool = self.sample_pool(five_prob as f32 / 1000.0, four_prob as f32 / 1000.0, five_focus_guarantee, four_focus_guarantee);
-            
-            self.pull_item(sampled_pool);
 
             match sampled_pool {
                 Pool::FivestarFocus => {
@@ -116,6 +124,13 @@ impl Sim {
                 }
             }
 
+            if self.banner.epitomized_path {
+                let path = (sampled_pool == Pool::Fivestar || sampled_pool == Pool::FivestarFocus) && fate_points >= 2;
+                fate_points += self.pull_item(sampled_pool, path);
+            } else {
+                self.pull_item(sampled_pool, false);
+            }
+
             pull_count += 1;
 
             if self.goal_data.is_met() {
@@ -124,26 +139,25 @@ impl Sim {
         }
     }
 
-    /// Evaluates the result of selecting the given sample. Returns `true` if the
-    /// sample made the rate increase reset.
-    fn pull_item(&mut self, sample_pool: Pool) {
-        if sample_pool == Pool::Threestar
-            || sample_pool == Pool::Fourstar
-            || sample_pool == Pool::Fivestar
-        {
-            return;
+    /// Evaluates the result of selecting the given sample. Returns how Fate Points
+    /// should be adjusted per result.
+    fn pull_item(&mut self, sample_pool: Pool, path: bool) -> i8 {
+        if sample_pool == Pool::Threestar || sample_pool == Pool::Fourstar {
+            return 0;
+        } else if sample_pool == Pool::Fivestar && !path {
+            return 1;
         }
 
-        let focus_count = if sample_pool == Pool::FivestarFocus {
+        let focus_count = if sample_pool == Pool::FivestarFocus || path {
             self.banner.focus_sizes[0] + self.banner.focus_sizes[1]
         } else {
             self.banner.focus_sizes[2] + self.banner.focus_sizes[3]
         };
-        let which_unit = self.rng.gen::<usize>() % focus_count as usize;
+        let which_unit = if path { 0 } else { self.rng.gen::<usize>() % focus_count as usize };
 
         let (idx, idy) = if sample_pool == Pool::FivestarFocus && which_unit < self.banner.focus_sizes[0] as usize {
             (0, which_unit)
-        } else if sample_pool == Pool::FivestarFocus {
+        } else if sample_pool == Pool::FivestarFocus || path {
             (1, which_unit - self.banner.focus_sizes[0] as usize)
         } else if which_unit < self.banner.focus_sizes[2] as usize {
             (2, which_unit)
@@ -162,6 +176,21 @@ impl Sim {
                     self.goal_data.items_needed[idx] = false;
                 }
             }
+
+            // Resorts weapon goal so that the selected Epitomized Path (at 0)
+            // always is the one with the highest copies needed.
+            // TODO: Need to figure out stats on switching EP as doing so clears Fate Points
+            // if idx == 1 && self.banner.epitomized_path {
+            //     self.goal_data.copies_needed[idx].sort_by(|x, y| y.cmp(x))
+            // }
+        }
+
+        if path {
+            return -2;
+        } else if idx == 1 && which_unit != 0 {
+            return 1;
+        } else {
+            return 0;
         }
     }
 

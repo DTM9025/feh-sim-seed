@@ -1,3 +1,6 @@
+#### v0.0.4 - 29 Mar 2024
+* Add Epitomized Path for Weapon Banners
+
 #### v0.0.3 - 22 Aug 2021
 * Add toggle to switch between graph showing number of pulls and number of primogems.
 

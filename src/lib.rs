@@ -133,6 +133,8 @@ pub enum Msg {
     Alert { message: String },
     /// Gather data.
     Run,
+    /// Change whether Epitomize Path is active.
+    BannerEpitomizePathToggle,
     /// Change the number of focus units for a given color.
     BannerFocusSizeChange { item_type: ItemType, quantity: i8 },
     /// Change the starting rates.
@@ -178,6 +180,10 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             }
         }
         Msg::Alert { message } => alert(&message),
+        Msg::BannerEpitomizePathToggle => {
+            model.banner.epitomized_path = !model.banner.epitomized_path;
+            model.data.clear();
+        }
         Msg::BannerFocusSizeChange { item_type, quantity } => {
             model.banner.focus_sizes[item_type as usize] = quantity;
             model.data.clear();
@@ -188,6 +194,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             model.banner.split_rates = split_rates;
             model.banner.five_pity = five_pity;
             model.banner.four_pity = four_pity;
+            model.banner.epitomized_path = false;
             model.data.clear();
             if split_rates == (50, 50) {
                 // Character Event Wish
@@ -199,7 +206,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 // Standard Wish
                 // Note that because there is no focus, we
                 // simulate this by having all items in focus.
-                model.banner.focus_sizes = [5, 10, 19, 18];
+                model.banner.focus_sizes = [7, 10, 39, 18];
             }
         }
         Msg::BannerSet { banner } => {
@@ -340,7 +347,7 @@ fn main_page(model: &Model) -> Vec<Node<Msg>> {
                     At::Href => "/genshinstatsim/help";
                 ],
             ],
-            " | v0.0.3 ",
+            " | v0.0.4 ",
             a![
                 "Changelog",
                 attrs![

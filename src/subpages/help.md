@@ -29,6 +29,12 @@ For examples of how they work, you can choose a preset and then switch to a cust
 
 For example, if you want a C6 of the new character and also to pick up one copy of another unit , set the selector to "All of these" instead of "Any of these" and create two entries: 7 copies of a specific 5* character, and 1 copy of a specific other unit unit. The simulation will then pull until both that other unit has appeared and the new unit has appeared 7 times.
 
+Be sure to choose the correct goal type when doing custom goals. If say you have a 5* Character goal on the Weapon Banner, the sim will infinitely loop as it is impossible to get a 5* focus character from the Weapon Banner. While the sim disables the ability to choose mismatching goals for the most part, there are cases (like having multiple goals) where it is not, so please be careful.
+
+<!-- Note that when enabling the Epitomized Path, when using custom goals the sim assumes that the weapon selected for the path is the one with the highest number of copies needed. This is the optimal selection that results in the fewest pulls. Whenever a goal is summoned, if the selected Epitomized Path is no longer the one with the highest number of copies needed, the sim will change its selection to be the one with the current highest number of copies needed automatically. This again is the optimal procedure that results in the fewest pulls. -->
+
+Note that when enabling the Epitomized Path, when using custom goals the sim assumes that the weapon selected for the path is represented by the 5* goal listed first. This will not change unless that goal is completed, in which case the weapon selected for the path is moved the the second listed 5* goal, and so on. Optimally, the strategy with the fewest pulls would be to have the path for the 5* goal with the most amount of copies needed, and once that is completed move to the second most amount, and so on. Thus, it is suggested to order the 5* goals from highest number of copies needed to lowest when using Epitomized Path. However, we leave the option to have alternative selection orders in case there are specific wants and such for your summoning scenario.
+
 ### Banner selection
 
 Select the starting rates from the dropdown menu.

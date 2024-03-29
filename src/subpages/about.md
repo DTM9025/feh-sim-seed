@@ -24,5 +24,6 @@ The model used is based on the statistics given in this post:
 
 ### Note on Epitomized Path
 
-Note that currently, the Epitomized Path mechanic for Weapon Banners has not been implemented yet. This
-mechanic will hopefully be included in this simulator in the near future.
+<!-- Note that when enabling the Epitomized Path, when using custom goals the sim assumes that the weapon selected by the path is the one with the highest number of copies needed. This is the optimal selection that results in the fewest pulls. Whenever a goal is summoned, if the selected Epitomized Path is no longer the one with the highest number of copies needed, the sim will change its selection to be the one with the current highest number of copies needed automatically. This again is the optimal procedure that results in the fewest pulls. -->
+
+Note that when enabling the Epitomized Path, when using custom goals the sim assumes that the weapon selected for the path is represented by the 5* goal listed first. This will not change until that goal is completed, in which case the weapon selected for the path is moved the the second listed 5* goal, and so on. Optimally, the strategy with the fewest pulls would be to have the path for the 5* goal with the most amount of copies needed, and once that is completed move to the second most amount, and so on. Thus, it is suggested to order the 5* goals from highest number of copies needed to lowest when using Epitomized Path. However, we leave the option to have alternative selection orders in case there are specific wants and such for your summoning scenario.
