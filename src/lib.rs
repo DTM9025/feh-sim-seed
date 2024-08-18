@@ -202,6 +202,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             } else if split_rates == (75, 25) {
                 // Weapon Event Wish
                 model.banner.focus_sizes = [0, 2, 0, 5];
+                model.banner.epitomized_path = true;
             } else if split_rates == (100, 0) {
                 // Standard Wish
                 // Note that because there is no focus, we
