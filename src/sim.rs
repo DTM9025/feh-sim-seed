@@ -125,7 +125,7 @@ impl Sim {
             }
 
             if self.banner.epitomized_path {
-                let path = (sampled_pool == Pool::Fivestar || sampled_pool == Pool::FivestarFocus) && fate_points >= 2;
+                let path = (sampled_pool == Pool::Fivestar || sampled_pool == Pool::FivestarFocus) && fate_points >= 1;
                 fate_points += self.pull_item(sampled_pool, path);
             } else {
                 self.pull_item(sampled_pool, false);
@@ -186,7 +186,7 @@ impl Sim {
         }
 
         if path {
-            return -2;
+            return -1;
         } else if idx == 1 && which_unit != 0 {
             return 1;
         } else {

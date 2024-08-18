@@ -1,3 +1,7 @@
+#### v0.0.5 - 17 Aug 2024
+* Adjusted Character Event Banner with Capturing Radiance (i.e. 50/50 to 55/45)
+* Adjusted needed Epitomized Path points from 2 to 1.
+
 #### v0.0.4 - 29 Mar 2024
 * Add Epitomized Path for Weapon Banners
 

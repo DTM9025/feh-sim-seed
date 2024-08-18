@@ -69,7 +69,7 @@ pub fn banner_selector(banner: &Banner) -> Node<Msg> {
                         Msg::Null
                     }
                 }),
-                rate_option(6, 51, (50, 50), 73, 8, "Character Event Wish"),
+                rate_option(6, 51, (55, 45), 73, 8, "Character Event Wish"),
                 rate_option(7, 60, (75, 25), 62, 7, "Weapon Event Wish"),
                 rate_option(6, 51, (100, 0), 73, 8, "Standard Wish"),
             ],
