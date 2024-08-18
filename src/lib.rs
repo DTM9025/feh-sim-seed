@@ -196,7 +196,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             model.banner.four_pity = four_pity;
             model.banner.epitomized_path = false;
             model.data.clear();
-            if split_rates == (50, 50) {
+            if split_rates == (55, 45) {
                 // Character Event Wish
                 model.banner.focus_sizes = [1, 0, 3, 0];
             } else if split_rates == (75, 25) {
