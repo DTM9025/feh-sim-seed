@@ -47,4 +47,4 @@ The graph shows how many orbs you need to spend to get a certain percent chance 
 
 Clicking or tapping on the graph will place a label on the line at the chosen horizontal position.
 
-Don't forget that there is no amount of spending that can guarantee that you reach the goal. The 99th percentile shows a really high cost, but one out of every hundred people who read this will spend more than that next time they go to summon.
+Just as a reminder, just because a scenario has a very low probability doesn't mean it won't occur. The 99th percentile seems really unlikely, but one out of every hundred people will spend more than that next time they go to summon.
