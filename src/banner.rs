@@ -20,7 +20,7 @@ impl Default for Banner {
             focus_sizes: [1, 0, 3, 0],
             five_rate: 6,
             four_rate: 51,
-            split_rates: (55, 45),
+            split_rates: (50, 50),
             five_pity: 73,
             four_pity: 8,
             epitomized_path: false,
@@ -69,7 +69,7 @@ pub fn banner_selector(banner: &Banner) -> Node<Msg> {
                         Msg::Null
                     }
                 }),
-                rate_option(6, 51, (55, 45), 73, 8, "Character Event Wish"),
+                rate_option(6, 51, (50, 50), 73, 8, "Character Event Wish"),
                 rate_option(7, 60, (75, 25), 62, 7, "Weapon Event Wish"),
                 rate_option(6, 51, (100, 0), 73, 8, "Standard Wish"),
             ],
