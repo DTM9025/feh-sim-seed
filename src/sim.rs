@@ -79,8 +79,9 @@ impl Sim {
         let mut five_focus_guarantee = false;
         let mut four_focus_guarantee = false;
         let mut fate_points = 0;
+        let mut capturing_points = 0i8;
 
-        let mut pull_count = 0 as u32;
+        let mut pull_count = 0;
         self.init_goal_data();
         loop {
             let five_prob = if five_pity_count > self.banner.five_pity {
@@ -97,32 +98,61 @@ impl Sim {
 
             let sampled_pool = self.sample_pool(five_prob as f32 / 1000.0, four_prob as f32 / 1000.0, five_focus_guarantee, four_focus_guarantee);
 
-            match sampled_pool {
+            let sampled_pool = match sampled_pool {
                 Pool::FivestarFocus => {
+                    if self.banner.capturing_radiance && !five_focus_guarantee {
+                        capturing_points = 0;
+                    }
                     five_pity_count = 1;
                     four_pity_count += 1;
                     five_focus_guarantee = false;
+                    sampled_pool
                 }
                 Pool::Fivestar => {
                     five_pity_count = 1;
                     four_pity_count += 1;
-                    five_focus_guarantee = true;
+
+                    if !self.banner.capturing_radiance {
+                        five_focus_guarantee = true;
+                        sampled_pool
+                    } else if capturing_points < 2 {
+                        capturing_points += 1;
+                        five_focus_guarantee = true;
+                        sampled_pool
+                    } else if capturing_points == 2 {
+                        if self.rng.gen_bool(0.5) {
+                            capturing_points = 0;
+                            five_focus_guarantee = false;
+                            Pool::FivestarFocus
+                        } else {
+                            capturing_points += 1;
+                            five_focus_guarantee = true;
+                            sampled_pool
+                        }
+                    } else {
+                        capturing_points = 0;
+                        five_focus_guarantee = false;
+                        Pool::FivestarFocus
+                    }
                 }
                 Pool::FourstarFocus => {
                     five_pity_count += 1;
                     four_pity_count = 1;
                     four_focus_guarantee = false;
+                    sampled_pool
                 }
                 Pool::Fourstar => {
                     five_pity_count += 1;
                     four_pity_count = 1;
                     four_focus_guarantee = true;
+                    sampled_pool
                 }
                 _ => {
                     five_pity_count += 1;
                     four_pity_count += 1;
+                    sampled_pool
                 }
-            }
+            };
 
             if self.banner.epitomized_path {
                 let path = (sampled_pool == Pool::Fivestar || sampled_pool == Pool::FivestarFocus) && fate_points >= 1;

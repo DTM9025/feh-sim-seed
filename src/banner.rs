@@ -12,6 +12,7 @@ pub struct Banner {
     pub five_pity: u16,
     pub four_pity: u16,
     pub epitomized_path: bool,
+    pub capturing_radiance: bool,
 }
 
 impl Default for Banner {
@@ -24,6 +25,7 @@ impl Default for Banner {
             five_pity: 73,
             four_pity: 8,
             epitomized_path: false,
+            capturing_radiance: true,
         }
     }
 }
@@ -73,7 +75,16 @@ pub fn banner_selector(banner: &Banner) -> Node<Msg> {
                 rate_option(7, 60, (75, 25), 62, 7, "Weapon Event Wish"),
                 rate_option(6, 51, (100, 0), 73, 8, "Standard Wish"),
             ],
-            if banner.split_rates == (75, 25) {
+            if banner.split_rates == (50, 50) {
+                nodes![
+                    input![
+                        id!["capturing_radiance"],
+                        simple_ev(Ev::Input, Msg::BannerCapturingRadianceToggle),
+                        attrs![At::Type => "checkbox"; At::Checked => banner.capturing_radiance.as_at_value()],
+                    ],
+                    label![style![St::PaddingLeft => em(0.25)], attrs![At::For => "capturing_radiance"], "Capturing Radiance?"]
+                ]
+            } else if banner.split_rates == (75, 25) {
                 nodes![
                     input![
                         id!["epitomized_path"],

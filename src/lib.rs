@@ -133,6 +133,8 @@ pub enum Msg {
     Alert { message: String },
     /// Gather data.
     Run,
+    /// Change whether Capturing Radiance is active.
+    BannerCapturingRadianceToggle,
     /// Change whether Epitomize Path is active.
     BannerEpitomizePathToggle,
     /// Change the number of focus units for a given color.
@@ -180,6 +182,10 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             }
         }
         Msg::Alert { message } => alert(&message),
+        Msg::BannerCapturingRadianceToggle => {
+            model.banner.capturing_radiance = !model.banner.capturing_radiance;
+            model.data.clear();
+        }
         Msg::BannerEpitomizePathToggle => {
             model.banner.epitomized_path = !model.banner.epitomized_path;
             model.data.clear();
@@ -195,10 +201,12 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             model.banner.five_pity = five_pity;
             model.banner.four_pity = four_pity;
             model.banner.epitomized_path = false;
+            model.banner.capturing_radiance = false;
             model.data.clear();
             if split_rates == (50, 50) {
                 // Character Event Wish
                 model.banner.focus_sizes = [1, 0, 3, 0];
+                model.banner.capturing_radiance = true;
             } else if split_rates == (75, 25) {
                 // Weapon Event Wish
                 model.banner.focus_sizes = [0, 2, 0, 5];
@@ -207,7 +215,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 // Standard Wish
                 // Note that because there is no focus, we
                 // simulate this by having all items in focus.
-                model.banner.focus_sizes = [7, 10, 39, 18];
+                model.banner.focus_sizes = [7, 10, 40, 18];
             }
         }
         Msg::BannerSet { banner } => {
@@ -348,7 +356,7 @@ fn main_page(model: &Model) -> Vec<Node<Msg>> {
                     At::Href => "/genshinstatsim/help";
                 ],
             ],
-            " | v0.0.5 ",
+            " | v0.0.6 ",
             a![
                 "Changelog",
                 attrs![
