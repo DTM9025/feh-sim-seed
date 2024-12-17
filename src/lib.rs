@@ -95,6 +95,7 @@ impl TryFrom<u8> for Pool {
 #[derive(Copy, Clone, Debug)]
 pub enum Page {
     Main,
+    About,
     Help,
     Changelog,
 }
@@ -317,6 +318,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
 fn view(model: &Model) -> Vec<Node<Msg>> {
     match model.curr_page {
         Page::Main => main_page(model),
+        Page::About => subpages::about(),
         Page::Help => subpages::help(),
         Page::Changelog => subpages::changelog(),
     }
@@ -328,25 +330,25 @@ fn main_page(model: &Model) -> Vec<Node<Msg>> {
         header![
             class!["no-select"],
             a![
+                "About",
+                attrs! [
+                    At::Href => "/genshinstatsim/about";
+                ],
+            ],
+            " | ",
+            a![
                 "How to use",
                 attrs! [
                     At::Href => "/fehstatsim/help";
                 ],
             ],
-            " | v0.3.1 ",
+            " | v0.3.2 ",
             a![
                 "Changelog",
                 attrs![
                     At::Href => "/fehstatsim/changelog";
                 ],
             ],
-            " | ",
-            a![
-                "Contact",
-                attrs![
-                    At::Href => "https://www.reddit.com/message/compose?to=minno&subject=fehstatsim%20site%20help";
-                ]
-            ]
         ],
         div![
             class!["no-select"],
@@ -432,6 +434,7 @@ fn routes(url: seed::Url) -> Option<Msg> {
     let mut messages = vec![];
 
     messages.push(match url.path.get(1).map(String::as_str) {
+        Some("about") => Msg::PageChange(Page::About),
         Some("help") => Msg::PageChange(Page::Help),
         Some("changelog") => Msg::PageChange(Page::Changelog),
         _ => Msg::PageChange(Page::Main),

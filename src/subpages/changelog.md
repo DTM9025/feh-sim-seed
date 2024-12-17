@@ -1,3 +1,9 @@
+#### v0.3.2 - 1 Jul 2024
+
+* Fixed underflow bug in pity rate reset calculation.
+
+* Fixed error in handling of focus charges.
+
 #### v0.3.1 - 24 Feb 2024
 
 * Add support for partial pity rate resets (thanks, DTM9025)
