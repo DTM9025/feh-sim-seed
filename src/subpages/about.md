@@ -22,6 +22,15 @@ certain assumption that had to be made when building this statistic simulator.
 The model used is based on the statistics given in this post:
 * [https://www.hoyolab.com/genshin/article/497840](https://www.hoyolab.com/genshin/article/497840)
 
+### Assumptions About Capturing Radiance
+
+Due to the fact that the exact mechanics of Captruing Radiance are unknown, there are certain assumption that had to be made when building this statistic simulator.
+
+The model used is based on the statistics given in this post:
+* [https://www.reddit.com/r/Genshin_Impact/comments/1hd1sqa/understanding_genshin_impacts_capturing_radiance/](https://www.reddit.com/r/Genshin_Impact/comments/1hd1sqa/understanding_genshin_impacts_capturing_radiance/)
+
+Note that at the time of that post, the exact probability of receieving a 5* Focus for when Counter = 2 is currently unknown. This simulator assumes that probability is 55%, which is the lowest whole number value that meets or exceed the consolidated probabililty promised by Mihoyo.
+
 ### Note on Epitomized Path
 
 <!-- Note that when enabling the Epitomized Path, when using custom goals the sim assumes that the weapon selected by the path is the one with the highest number of copies needed. This is the optimal selection that results in the fewest pulls. Whenever a goal is summoned, if the selected Epitomized Path is no longer the one with the highest number of copies needed, the sim will change its selection to be the one with the current highest number of copies needed automatically. This again is the optimal procedure that results in the fewest pulls. -->

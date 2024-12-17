@@ -1,3 +1,6 @@
+#### v0.0.7 - 16 Dec 2024
+* Implement updated [latest information](https://www.reddit.com/r/Genshin_Impact/comments/1hd1sqa/understanding_genshin_impacts_capturing_radiance/) on Capturing Radiance.
+
 #### v0.0.6 - 13 Sep 2024
 * Reverted rate adjustment of Character Event Banner back to 50/50
 * Implement [latest information](https://www.reddit.com/r/Genshin_Impact/comments/1f5mfqf/the_new_cn_capturing_radiance_theory/) on Capturing Radiance temporarily (which is wrong but there's nothing better yet)

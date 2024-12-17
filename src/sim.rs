@@ -79,7 +79,7 @@ impl Sim {
         let mut five_focus_guarantee = false;
         let mut four_focus_guarantee = false;
         let mut fate_points = 0;
-        let mut capturing_points = 0i8;
+        let mut capturing_points = 1u8;
 
         let mut pull_count = 0;
         self.init_goal_data();
@@ -101,7 +101,11 @@ impl Sim {
             let sampled_pool = match sampled_pool {
                 Pool::FivestarFocus => {
                     if self.banner.capturing_radiance && !five_focus_guarantee {
-                        capturing_points = 0;
+                        if capturing_points == 3 {
+                            capturing_points = 1;
+                        } else {
+                            capturing_points = capturing_points.saturating_sub(1)
+                        }
                     }
                     five_pity_count = 1;
                     four_pity_count += 1;
@@ -120,8 +124,9 @@ impl Sim {
                         five_focus_guarantee = true;
                         sampled_pool
                     } else if capturing_points == 2 {
-                        if self.rng.gen_bool(0.5) {
-                            capturing_points = 0;
+                        // Calculates to an overall 55% probability of 5* Focus when having 2 Capturing Points
+                        if self.rng.gen_bool(0.1) {
+                            capturing_points -= 1;
                             five_focus_guarantee = false;
                             Pool::FivestarFocus
                         } else {
@@ -130,7 +135,7 @@ impl Sim {
                             sampled_pool
                         }
                     } else {
-                        capturing_points = 0;
+                        capturing_points = 1;
                         five_focus_guarantee = false;
                         Pool::FivestarFocus
                     }
