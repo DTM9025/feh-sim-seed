@@ -332,7 +332,7 @@ fn main_page(model: &Model) -> Vec<Node<Msg>> {
             a![
                 "About",
                 attrs! [
-                    At::Href => "/genshinstatsim/about";
+                    At::Href => "/fehstatsim/about";
                 ],
             ],
             " | ",
