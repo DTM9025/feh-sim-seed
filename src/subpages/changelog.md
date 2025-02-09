@@ -1,3 +1,7 @@
+#### v0.3.3 - 9 Feb 2025
+
+* Update unit counts in summoning pool.
+
 #### v0.3.2 - 1 Jul 2024
 
 * Fixed underflow bug in pity rate reset calculation.
