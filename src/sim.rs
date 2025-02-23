@@ -1,6 +1,6 @@
 use crate::*;
 
-use rand::distributions::Distribution;
+use rand::distr::Distribution;
 
 use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
@@ -64,7 +64,7 @@ impl Sim {
             banner,
             goal: goal.as_custom(&banner),
             tables: RandTables::default(),
-            rng: SmallRng::from_entropy(),
+            rng: SmallRng::from_os_rng(),
             goal_data: GoalData {
                 is_fourstar_focus: banner.fourstar_focus.is_some(),
                 color_needed: [false; 4],
@@ -206,7 +206,7 @@ impl Sim {
         let which_unit = if sample.0 == Pool::FourstarFocus {
             0
         } else {
-            self.rng.gen::<usize>() % focus_count as usize
+            self.rng.random_range(0..focus_count) as usize
         };
         if which_unit < self.goal_data.copies_needed[color as usize].len() {
             if self.goal_data.copies_needed[color as usize][which_unit] > 1 {

@@ -1,4 +1,4 @@
-use rand::{distributions::Distribution, Rng};
+use rand::{distr::Distribution, Rng};
 
 /// Optimized version of rand::WeightedIndex for a fixed-size collection of four floats.
 #[derive(Copy, Clone, Debug, Default)]
@@ -24,7 +24,7 @@ impl WeightedIndex4 {
 
 impl Distribution<usize> for WeightedIndex4 {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> usize {
-        let choice = rng.gen::<f32>();
+        let choice = rng.random::<f32>();
         if choice > self.values[1] {
             if choice > self.values[2] {
                 3
@@ -72,7 +72,7 @@ impl WeightedIndex6 {
 
 impl Distribution<usize> for WeightedIndex6 {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> usize {
-        let choice = rng.gen::<f32>();
+        let choice = rng.random::<f32>();
         if choice > self.values[2] {
             if choice > self.values[3] {
                 if choice > self.values[4] {
