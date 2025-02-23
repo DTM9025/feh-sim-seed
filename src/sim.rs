@@ -1,7 +1,7 @@
 use crate::*;
 
-use rand::distributions::Distribution;
-use rand::distributions::Bernoulli;
+use rand::distr::Distribution;
+use rand::distr::Bernoulli;
 
 use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
@@ -41,7 +41,7 @@ impl Sim {
         let sim = Sim {
             banner,
             goal: goal.as_custom(&banner),
-            rng: SmallRng::from_entropy(),
+            rng: SmallRng::from_os_rng(),
             bernouli: Bernoulli::from_ratio(banner.split_rates.0 as u32, 100).unwrap(),
             goal_data: GoalData {
                 items_needed: [false; 4],
@@ -125,7 +125,7 @@ impl Sim {
                         sampled_pool
                     } else if capturing_points == 2 {
                         // Calculates to an overall 55% probability of 5* Focus when having 2 Capturing Points
-                        if self.rng.gen_bool(0.1) {
+                        if self.rng.random_bool(0.1) {
                             capturing_points -= 1;
                             five_focus_guarantee = false;
                             Pool::FivestarFocus
@@ -188,7 +188,7 @@ impl Sim {
         } else {
             self.banner.focus_sizes[2] + self.banner.focus_sizes[3]
         };
-        let which_unit = if path { 0 } else { self.rng.gen::<usize>() % focus_count as usize };
+        let which_unit = if path { 0 } else { self.rng.random_range(0..focus_count) as usize };
 
         let (idx, idy) = if sample_pool == Pool::FivestarFocus && which_unit < self.banner.focus_sizes[0] as usize {
             (0, which_unit)
@@ -232,7 +232,7 @@ impl Sim {
     /// Chooses a weighted random unit from the summoning pool. `pity_incr` is the
     /// number of times that the 5* rates have increased by 0.5% total.
     fn sample_pool(&mut self, five_prob: f32, four_prob: f32, five_focus: bool, four_focus: bool) -> Pool {
-        let choice = self.rng.gen::<f32>();
+        let choice = self.rng.random::<f32>();
 
         if choice < five_prob && five_focus {
             return Pool::FivestarFocus;

@@ -1,3 +1,6 @@
+#### v0.1.0 - 23 Feb 2025
+* Upgraded dependencies
+
 #### v0.0.7 - 16 Dec 2024
 * Implement updated [latest information](https://www.reddit.com/r/Genshin_Impact/comments/1hd1sqa/understanding_genshin_impacts_capturing_radiance/) on Capturing Radiance.
 

@@ -356,7 +356,7 @@ fn main_page(model: &Model) -> Vec<Node<Msg>> {
                     At::Href => "/genshinstatsim/help";
                 ],
             ],
-            " | v0.0.7 ",
+            " | v0.1.0 ",
             a![
                 "Changelog",
                 attrs![
