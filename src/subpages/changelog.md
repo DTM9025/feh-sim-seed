@@ -1,3 +1,7 @@
+#### v0.3.5 - 1 Oct 2025
+
+* Update unit counts in summoning pool.
+
 #### v0.3.4 - 23 Feb 2025
 
 * Upgraded dependencies
