@@ -140,7 +140,7 @@ pub enum Goal {
 
 impl Default for Goal {
     fn default() -> Self {
-        Goal::Preset(GoalPreset::AnyFocus, 1)
+        Goal::Preset(GoalPreset::RedFocus, 1)
     }
 }
 
@@ -259,20 +259,7 @@ pub fn goal_selector(goal: &Goal, banner: &Banner) -> Node<Msg> {
             }
         }),
     ];
-    select.add_child(option![
-        attrs![
-            At::Value => "custom";
-        ],
-        if let Goal::Custom(_) = goal {
-            attrs![
-                At::Selected => "";
-            ]
-        } else {
-            attrs![]
-        },
-        "Custom goal",
-    ]);
-    for preset in GoalPreset::iter() {
+    for preset in [GoalPreset::RedFocus, GoalPreset::AnyRed, GoalPreset::RedFourstarFocus] {
         let mut attrs = attrs! [
             At::Value => preset as usize;
         ];

@@ -2,6 +2,13 @@ use seed::prelude::*;
 
 use crate::{Color, Msg};
 
+#[derive(Copy, Clone, PartialEq, Eq, Debug, serde::Serialize, serde::Deserialize)]
+pub enum OrbBehavior {
+    Normal,
+    AllReds,
+    NoReds,
+}
+
 /// Representation of a summoning focus.
 #[derive(Copy, Clone, PartialEq, Eq, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Banner {
@@ -9,6 +16,7 @@ pub struct Banner {
     pub starting_rates: (u8, u8),
     pub focus_charges: bool,
     pub fourstar_focus: Option<Color>,
+    pub orb_behavior: OrbBehavior,
 }
 
 impl Default for Banner {
@@ -18,6 +26,7 @@ impl Default for Banner {
             starting_rates: (3, 3),
             focus_charges: true,
             fourstar_focus: None,
+            orb_behavior: OrbBehavior::Normal,
         }
     }
 }
@@ -65,12 +74,50 @@ pub fn banner_selector(banner: &Banner) -> Node<Msg> {
                 rate_option((4, 2), "4%/2% (Weekly Focus)"),
                 rate_option((6, 0), "6%/0% (Double Special Heroes)"),
             ],
-            input![
-                id!["focus_charges_banner"],
-                simple_ev(Ev::Input, Msg::BannerFocusChargesToggle),
-                attrs![At::Type => "checkbox"; At::Checked => banner.focus_charges.as_at_value()],
+            nodes![
+                label![
+                    attrs![
+                        At::For => "orb_behavior";
+                    ],
+                    " Orb Behavior: ",
+                ],
+                select![
+                    id!["orb_behavior"],
+                    input_ev("input", |text| {
+                        let orb_behavior_result = match &*text {
+                            "Normal" => Some(OrbBehavior::Normal),
+                            "All Reds (And Focus Units)" => Some(OrbBehavior::AllReds),
+                            "No Reds (Except Focus Units)" => Some(OrbBehavior::NoReds),
+                            _ => None,
+                        };
+                        Msg::OrbBehaviorChange { orb_behavior_result }
+                    }),
+                    option![
+                        if banner.orb_behavior == OrbBehavior::Normal {
+                            attrs![At::Selected => "1"]
+                        } else {
+                            attrs![]
+                        },
+                        "Normal"
+                    ],
+                    option![
+                        if banner.orb_behavior == OrbBehavior::AllReds {
+                            attrs![At::Selected => "1"]
+                        } else {
+                            attrs![]
+                        },
+                        "All Reds (And Focus Units)"
+                    ],
+                    option![
+                        if banner.orb_behavior == OrbBehavior::NoReds {
+                            attrs![At::Selected => "1"]
+                        } else {
+                            attrs![]
+                        },
+                        "No Reds (Except Focus Units)"
+                    ],
+                ],
             ],
-            label![attrs![At::For => "focus_charges_banner"], "Focus charges?"]
         ],
         div![
             id!["focus_counts"],
@@ -272,7 +319,14 @@ pub fn banner_selector(banner: &Banner) -> Node<Msg> {
                 ]
             } else {
                 vec![]
-            }
+            },
+            label![attrs![At::For => "focus_charges_banner"], " "],
+            input![
+                id!["focus_charges_banner"],
+                simple_ev(Ev::Input, Msg::BannerFocusChargesToggle),
+                attrs![At::Type => "checkbox"; At::Checked => banner.focus_charges.as_at_value()],
+            ],
+            label![attrs![At::For => "focus_charges_banner"], "Focus charges?"],
         ],
     ]
 }

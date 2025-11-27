@@ -10,7 +10,7 @@ use strum_macros::EnumIter;
 use serde::{Deserialize, Serialize};
 
 mod banner;
-use banner::Banner;
+use banner::{Banner, OrbBehavior};
 
 mod goal;
 use goal::{Goal, GoalKind, GoalPart, GoalPreset};
@@ -96,8 +96,6 @@ impl TryFrom<u8> for Pool {
 pub enum Page {
     Main,
     About,
-    Help,
-    Changelog,
 }
 
 impl Default for Page {
@@ -167,6 +165,8 @@ pub enum Msg {
     Permalink,
     /// Highlight a point on the graph.
     GraphHighlight { frac: f32 },
+    /// Change orb behavior.
+    OrbBehaviorChange { orb_behavior_result: Option<OrbBehavior> },
 }
 
 /// Update model with the given message.
@@ -299,7 +299,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             model.curr_page = page;
         }
         Msg::Permalink => {
-            let url = seed::Url::new(vec!["fehstatsim/"]).search(&format!(
+            let url = seed::Url::new(vec!["orbbehavior/"]).search(&format!(
                 "v=3&banner={}&goal={}&run=1",
                 base64::encode(&bincode::serialize(&model.banner).unwrap()),
                 base64::encode(&bincode::serialize(&model.goal).unwrap())
@@ -308,6 +308,13 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         }
         Msg::GraphHighlight { frac } => {
             model.graph_highlight = Some(frac);
+        }
+        Msg::OrbBehaviorChange { orb_behavior_result } => {
+            match orb_behavior_result {
+                Some(orb_behavior) => model.banner.orb_behavior = orb_behavior,
+                None => (),
+            }
+            model.data.clear();
         }
     }
 }
@@ -319,8 +326,6 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
     match model.curr_page {
         Page::Main => main_page(model),
         Page::About => subpages::about(),
-        Page::Help => subpages::help(),
-        Page::Changelog => subpages::changelog(),
     }
 }
 
@@ -332,21 +337,7 @@ fn main_page(model: &Model) -> Vec<Node<Msg>> {
             a![
                 "About",
                 attrs! [
-                    At::Href => "/fehstatsim/about";
-                ],
-            ],
-            " | ",
-            a![
-                "How to use",
-                attrs! [
-                    At::Href => "/fehstatsim/help";
-                ],
-            ],
-            " | v0.3.5 ",
-            a![
-                "Changelog",
-                attrs![
-                    At::Href => "/fehstatsim/changelog";
+                    At::Href => "/orbbehavior/about";
                 ],
             ],
         ],
@@ -435,8 +426,6 @@ fn routes(url: seed::Url) -> Option<Msg> {
 
     messages.push(match url.path.get(1).map(String::as_str) {
         Some("about") => Msg::PageChange(Page::About),
-        Some("help") => Msg::PageChange(Page::Help),
-        Some("changelog") => Msg::PageChange(Page::Changelog),
         _ => Msg::PageChange(Page::Main),
     });
 

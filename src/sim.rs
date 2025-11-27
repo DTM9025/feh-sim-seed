@@ -77,14 +77,39 @@ impl Sim {
 
     /// Initializes the precalculated tables used for fast random sampling.
     fn init_probability_tables(&mut self) {
-        self.tables.pool_sizes = [
-            [0, 0, 0, 0],
-            [17, 13, 13, 16],
-            [0, 0, 0, 0],
-            [86, 68, 56, 46],
-            [50, 53, 40, 54],
-            [50, 53, 40, 54],
-        ];
+        match self.banner.orb_behavior {
+            OrbBehavior::Normal => {
+                self.tables.pool_sizes = [
+                    [0, 0, 0, 0],
+                    [17, 13, 13, 16],
+                    [0, 0, 0, 0],
+                    [86, 68, 56, 46],
+                    [50, 53, 40, 54],
+                    [50, 53, 40, 54],
+                ];
+            },
+            OrbBehavior::AllReds => {
+                self.tables.pool_sizes = [
+                    [0, 0, 0, 0],
+                    [17, 0, 0, 0],
+                    [0, 0, 0, 0],
+                    [86, 0, 0, 0],
+                    [50, 0, 0, 0],
+                    [50, 0, 0, 0],
+                ];
+            },
+            OrbBehavior::NoReds => {
+                self.tables.pool_sizes = [
+                    [0, 0, 0, 0],
+                    [0, 13, 13, 16],
+                    [0, 0, 0, 0],
+                    [0, 68, 56, 46],
+                    [0, 53, 40, 54],
+                    [0, 53, 40, 54],
+                ];
+            },
+        }
+
         for i in 0..4 {
             self.tables.pool_sizes[0][i] = self.banner.focus_sizes[i].max(0) as u8;
         }
